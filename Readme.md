@@ -420,13 +420,15 @@ modprobe br_netfilter
 lsmod | grep netfilter
 ```
 
-The 'br_netfilter' and 'bridge' kernel modules should appear.
+The `br_netfilter` and `bridge` kernel modules should appear.
 
 The following is required if it is not configured on the host. Check `/etc/sysctl.conf`
 
 ```bash
 cat /etc/sysctl.conf | grep forward
 cat /etc/sysctl.conf | grep bridge
+
+# and if entries are missing
 cat >> /etc/sysctl.conf << EOF
 # sysctl net.ipv4.ip_forward
 net.ipv4.ip_forward = 1
@@ -1574,4 +1576,4 @@ IF someone has a better and more secure approach, just go ahead and share it. Th
 - check whether `chattr` can change file attributes from within the container if the host already set those permissions
 - add some cronjobs for on-access scans of the container, esp. for python installs (...some script...)
 - investigate whether the container really cannot read out keyboard strokes, etc. from the host
-
+- speed up the network coming up (see delay mentioned above)
