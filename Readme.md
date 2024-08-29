@@ -50,7 +50,7 @@ First, look into the script and change names and variables according to your wis
 
 ### Define variables
 
-```
+```bash
 # outside container
 # set variables on host
 
@@ -1052,35 +1052,35 @@ There is no reason to allow for more from within the container even models can b
 > [!WARNING]
 > We do not cover here the usage of malware scanners, rootkit detectors, and audits. That requires serious in-depth knowledge of systems, esp. because detection does not mean hardening.
 
-However, if some is interested in that topic, please visit the following pages for Linux.
+However, if some is interested in that topic, please visit the following security related pages for Linux.
 
-https://linuxsecurity.expert/security-tools/linux-malware-detection-tools
-https://www.tecmint.com/scan-linux-for-malware-and-rootkits/
-https://www.tecmint.com/install-linux-malware-detect-lmd-in-rhel-centos-and-fedora/
-https://www.digitalocean.com/community/tutorials/how-to-sandbox-processes-with-systemd-on-ubuntu-20-04
+- [malware detection tools]{https://linuxsecurity.expert/security-tools/linux-malware-detection-tools}
+- [malware and rootkits]{https://www.tecmint.com/scan-linux-for-malware-and-rootkits}
+- [malware detection]{https://www.tecmint.com/install-linux-malware-detect-lmd-in-rhel-centos-and-fedora}
+- [sandboxing with systemd]{https://www.digitalocean.com/community/tutorials/how-to-sandbox-processes-with-systemd-on-ubuntu-20-04}
 
 > [!IMPORTANT]
 > A - not complete - list of virus scanners, rootkit detectors, etc. We have not tested each and do not have the knowledge to give a competent decision which engine is adequate for which task. The tutorial cannot cover that.
 
-- clamav		# virus scanner
-- rkhunter		# rootkit detection
-- lynis			# audit tool of system tools, can be applied to container as well
-- chkrootkit		# check for rootkits
-- LMD			# linux malware detect
+- clamav (virus scanner with [on-access scanning]{https://docs.clamav.net/manual/Usage/Scanning.html#on-access-scanning})
+- rkhunter ( rootkit detection)
+- lynis (audit tool of system tools, can be applied to a container as well)
+- chkrootkit (check for rootkits)
+- LMD (linux malware detect)
 
 And for the people who know what they do.. btw - not everything is FOSS and this is just a list of possibilities, not a recommendation:
 
-- AIDE			#
-- maltrail		#
-- ossec			#
-- openvas		#
-- radare2		#
-- remnux		#
-- rkdetector		#
-- tiger			#
-- tripwire		#
-- vuls			#
-- yara			#
+- AIDE
+- maltrail
+- ossec
+- openvas
+- radare2
+- remnux
+- rkdetector
+- tiger
+- tripwire
+- vuls
+- yara
 
 For those again who are from the IT world 'apparmor' and 'SELinux' are good tools to create an additional layer of security. 'firejail' can be compiled with 'apparmor' support, and may be another wrapper around the browser within the container.
 
