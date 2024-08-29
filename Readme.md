@@ -615,15 +615,15 @@ fi
 
 if [ "$?" -eq 0 ]; then
   # Find out the major device number used by the nvidia-uvm driver
-  D=`grep nvidia-uvm /proc/devices | awk '{print $1}'`
+  D=`grep nvidia-uvm /proc/devices | awk '(print $1)'`
   mknod -m 666 /dev/nvidia-uvm c $D 0
 else
   exit 1
 fi
 
 # required if the screen is not connected to the nvidia GPU(s) and uses e.g. a iGPU
-mknod -m 755 /dev/nvidia-caps c $(cat /proc/devices | grep nvidia-caps | awk '{print $1}') 80
-mknod -m 755 /dev/nvidia-uvm-tools c $(cat /proc/devices | grep nvidia-uvm | awk '{print $1}') 80
+mknod -m 755 /dev/nvidia-caps c $(cat /proc/devices | grep nvidia-caps | awk '(print $1)') 80
+mknod -m 755 /dev/nvidia-uvm-tools c $(cat /proc/devices | grep nvidia-uvm | awk '(print $1)') 80
 
 ## that's how it should look like on the host
 ## required IF GPU is not used for the screen but just for number crunching
@@ -1054,15 +1054,15 @@ There is no reason to allow for more from within the container even models can b
 
 However, if some is interested in that topic, please visit the following security related pages for Linux.
 
-- [malware detection tools]{https://linuxsecurity.expert/security-tools/linux-malware-detection-tools}
-- [malware and rootkits]{https://www.tecmint.com/scan-linux-for-malware-and-rootkits}
-- [malware detection]{https://www.tecmint.com/install-linux-malware-detect-lmd-in-rhel-centos-and-fedora}
-- [sandboxing with systemd]{https://www.digitalocean.com/community/tutorials/how-to-sandbox-processes-with-systemd-on-ubuntu-20-04}
+- [malware detection tools](https://linuxsecurity.expert/security-tools/linux-malware-detection-tools)
+- [malware and rootkits](https://www.tecmint.com/scan-linux-for-malware-and-rootkits)
+- [malware detection](https://www.tecmint.com/install-linux-malware-detect-lmd-in-rhel-centos-and-fedora)
+- [sandboxing with systemd](https://www.digitalocean.com/community/tutorials/how-to-sandbox-processes-with-systemd-on-ubuntu-20-04)
 
 > [!IMPORTANT]
 > A - not complete - list of virus scanners, rootkit detectors, etc. We have not tested each and do not have the knowledge to give a competent decision which engine is adequate for which task. The tutorial cannot cover that.
 
-- clamav (virus scanner with [on-access scanning]{https://docs.clamav.net/manual/Usage/Scanning.html#on-access-scanning})
+- clamav (virus scanner with [on-access scanning](https://docs.clamav.net/manual/Usage/Scanning.html#on-access-scanning))
 - rkhunter ( rootkit detection)
 - lynis (audit tool of system tools, can be applied to a container as well)
 - chkrootkit (check for rootkits)
@@ -1142,7 +1142,7 @@ There are some browser examples under Linux
 apt-get install netsurf-gtk
 ```
 
-- [palemoon]{https://www.palemoon.org/download.shtml}
+- [palemoon](https://www.palemoon.org/download.shtml)
 
 ```bash
 apt-get install libdbus-glib-1-2
@@ -1154,7 +1154,7 @@ tar -xvf palemoon-32.0.0.linux-x86_64-gtk3.tar.xz
 ./palemoon/palemoon # as user
 ```
 
-- [midori]{https://astian.org/midori-browser/download/linux}
+- [midori](https://astian.org/midori-browser/download/linux)
 
 ```bash
 # download manually and install from that directory
@@ -1167,7 +1167,7 @@ midori
 There are incidents when the browser version really does not fit to the OS, then drop that or invest time...
 We want to keep it simple: we won't go to the net, we just need the browser for local access to AI/ML engines, so no need to invest much as $USER.
 
-- [vivaldi]{https://www.vivaldi.com}
+- [vivaldi](https://www.vivaldi.com)
 
 ```bash
 # check for latest version before downloading
@@ -1226,7 +1226,7 @@ and comment out:
 
 ```bash
 # comment out:
-//        "origin=Debian,codename=${distro_codename},label=Debian";
+//        "origin=Debian,codename=$(distro_codename),label=Debian";
 ```
 
 We want only security updates which we want automatically
@@ -1542,16 +1542,16 @@ In the end one is self-responsible at every step, and one should not outsource c
 
 The following tutorials are good starting points to understand nspawn a little bit better, and it covers scenarios not touched by the tutorial. Most are focused on Debian/ Ubuntu/ Arch/ Fedora Linux based distributions.
 
-- [Debian nspawn]{https://wiki.debian.org/nspawn}
-- [nspawn]{https://wiki.arcoslab.org/tutorials/tutorials/systemd-nspawn
-- [graphical apps with nspawn]{https://ramsdenj.com/posts/2016-09-22-containerizing-graphical-applications-on-linux-with-systemd-nspawn}
-- [nspawn and network]{https://blog.karmacomputing.co.uk/using-systemd-nspawn-containers-with-publicly-routable-ips-ipv6-and-ipv4-via-bridged-mode-for-high-density-testing-whilst-balancing-tenant-isolation}
-- [Ubuntu]{https://clinta.github.io/getting-started-with-systemd-nspawnd}
-- [Arch]{https://wiki.archlinux.org/title/Systemd-nspawn}
-- [Fedora]{https://docs.fedoraproject.org/en-US/fedora-server/containerization/systemd-nspawn-setup}
-- [manual network setup]{https://www.cocode.se/linux/systemd_nspawn.html}
-- [nspawn]{https://www.cocode.se/linux/systemd_nspawn.html
-- [nvidia uvm]{https://askubuntu.com/questions/590319/how-do-i-enable-automatically-nvidia-uvm
+- [Debian nspawn](https://wiki.debian.org/nspawn)
+- [nspawn](https://wiki.arcoslab.org/tutorials/tutorials/systemd-nspawn
+- [graphical apps with nspawn](https://ramsdenj.com/posts/2016-09-22-containerizing-graphical-applications-on-linux-with-systemd-nspawn)
+- [nspawn and network](https://blog.karmacomputing.co.uk/using-systemd-nspawn-containers-with-publicly-routable-ips-ipv6-and-ipv4-via-bridged-mode-for-high-density-testing-whilst-balancing-tenant-isolation)
+- [Ubuntu](https://clinta.github.io/getting-started-with-systemd-nspawnd)
+- [Arch](https://wiki.archlinux.org/title/Systemd-nspawn)
+- [Fedora](https://docs.fedoraproject.org/en-US/fedora-server/containerization/systemd-nspawn-setup)
+- [manual network setup](https://www.cocode.se/linux/systemd_nspawn.html)
+- [nspawn](https://www.cocode.se/linux/systemd_nspawn.html
+- [nvidia uvm](https://askubuntu.com/questions/590319/how-do-i-enable-automatically-nvidia-uvm
 
 
 ### DISCLAIMER
