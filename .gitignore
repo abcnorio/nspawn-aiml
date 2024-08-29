@@ -1,0 +1,80 @@
+# History files
+.Rhistory
+.Rapp.history
+
+# Session Data files
+.RData
+.RDataTmp
+
+# User-specific files
+.Ruserdata
+
+# Example code in package build process
+*-Ex.R
+
+# Output files from R CMD build
+/*.tar.gz
+
+# Output files from R CMD check
+/*.Rcheck/
+
+# RStudio files
+.Rproj.user/
+
+# produced vignettes
+vignettes/*.html
+vignettes/*.pdf
+
+# OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
+.httr-oauth
+
+# knitr and R markdown default cache directories
+*_cache/
+/cache/
+
+# Temporary files created by R markdown
+*.utf8.md
+*.knit.md
+
+# R Environment Variables
+.Renviron
+
+# pkgdown site
+docs/
+
+# translation temp files
+po/*~
+
+# RStudio Connect folder
+rsconnect/
+
+# old and outdated files and folders
+oldandoutdated*
+
+# data not suitable for upload
+data_not-upload*
+
+# differential R files (older Versions)
+diff*
+diffinmeans*
+
+# helper functions external
+helper-functions-external*
+
+# aquad 7 and files -> look on aquad.de
+#AQUAD7/
+
+# R files not to be uploaded
+check-http.*
+FILES*
+TEMP*
+
+# all files that end with
+*~
+
+# all in BP
+ARCHIVE/
+docker/
+
+# md5 call
+md5call*
