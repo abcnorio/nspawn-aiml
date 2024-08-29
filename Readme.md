@@ -911,7 +911,6 @@ We use the user $USERAI on the container to install the conda environment. Befor
 
 # as root
 # install git required for AI/ML engines
-```
 apt-get install git --no-install-recommends
 ```
 
@@ -926,7 +925,6 @@ Now switch to user $USERAI
 
 # miniconda installation
 # https://docs.anaconda.com/miniconda/#miniconda-latest-installer-links
-```
 curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o ~/Miniconda3-latest-Linux-x86_64.sh
 chmod +x ~/Miniconda3-latest-Linux-x86_64.sh
 ```
