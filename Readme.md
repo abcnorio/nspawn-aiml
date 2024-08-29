@@ -83,7 +83,7 @@ HOSTLANADDRESS=192.168.1.115/24
 ```
 
 ### Check values
-```
+```bash
 echo "root path = $ROOT"
 echo "home path for container folder = $HOMIE"
 echo "cotainer name = $VNAME"
@@ -102,7 +102,7 @@ echo "host LAN IP/BC address = $HOSTLANADDRESS"
 ### Prepare folder for container
 
 We work as `root` - if you don't like that, replace all root commands with `sudo ...`
-```
+```bash
 su -
 apt-get update
 apt-get install systemd-container debootstrap
@@ -130,7 +130,7 @@ fi
 ```
 
 Install the base system via debootstrap. We use only a minimal system and some network utilities.
-```
+```bash
 debootstrap  --arch $ARCH --variant=minbase --include=systemd-container,systemd,dbus,iproute2,net-tools,iputils-ping $DEBOS $CONTFULLPATH/$VNAME http://deb.debian.org/debian/
 ```
 
@@ -144,7 +144,7 @@ Out example covers a host with bridge `br0`, a static IP for the host, and later
 
 If you do not want to create a bridge with systemd, look for alternatives (/etc/network/interfaces, NetworkManager/nmcli, bridge-utils/brctl, ...), and apply those tools.
 
-```
+```bash
 # static IP for host
 # outside container
 
@@ -156,7 +156,7 @@ brctl show
 
 If you already have a bridge 'br0' no need to perform the next steps...
 
-```
+```bash
 # We work after offical Debian guide for systemd-networkd
 # https://wiki.debian.org/SystemdNetworkd
 #
@@ -183,7 +183,7 @@ mv/etc/network/interfaces /etc/network/interfaces_BP
 
 Now we create a systemd-networkd bridge
 
-```
+```bash
 cat > /etc/systemd/network/br0.netdev << EOF
 [NetDev]
 Name=br0
@@ -193,7 +193,7 @@ EOF
 
 For connecting the bridge with the physical network device we need
 
-```
+```bash
 cat > /etc/systemd/network/br0.network << EOF
 [Match]
 Name=$PHYSDEV
@@ -211,7 +211,7 @@ To create the LAN access for the host with a static IP, you have to know the fol
 - adjust any adblockers/ DNS servers as the local LAN IP (probably) changes
 - if you prefer DHCP uncomment the DHCP entry and comment out the static part
 
-```
+```bash
 cat > /etc/systemd/network/lan0.network << EOF
 [Match]
 Name=br0
@@ -226,7 +226,7 @@ EOF
 
 For DHCP you can do (see official Debian guide)
 
-```
+```bash
 cat > /etc/systemd/network/lan0.network << EOF
 [Match]
 Name=br0
@@ -241,14 +241,14 @@ EOF
 
 Now we restart network - be aware if anything is not configured properly and you work remotely you cut yourself completely off the computer. With local access via keyboard you can always reverse things or via remote console.
 
-```
+```bash
 systemctl enable systemd-networkd
 systemctl restart systemd-networkd
 ```
 
 Check whether things are still ok - we check our IP, a ping to google's DNS, and resolving a DNS domain
 
-```
+```bash
 ifconfig
 ip -c link
 ping 8.8.8.8
@@ -258,13 +258,13 @@ dig github.com +short #140.82.121.4
 
 If all works well, now start the container for the first time manually.
 
-```
+```bash
 systemd-nspawn -D $OFFICIALPATH/$VNAME -U --machine $VNAME
 ```
 
 First, we set a `root` password
 
-```
+```bash
 # inside container
 # set root passwd
 passwd
@@ -272,14 +272,14 @@ passwd
 
 And allow a login from the outside and leave the container
 
-```
+```bash
 echo 'pts/1' >> /etc/securetty
 exit
 ```
 
 From this point one can use the `machinectl` command to manage the container (start, end, status)
 
-```
+```bash
 # outside container
 machinectl enable $VNAME
 machinectl start $VNAME
@@ -289,7 +289,7 @@ machinectl status $VNAME
 
 Let's change into the container (different terminal!) to see whether the container works as expected
 
-```
+```bash
 # inside container
 # change terminal window, become root and log into container
 # copy the ENV variables from the start of the script into the window
@@ -302,7 +302,7 @@ We have to set the following values according to your needs. The ethernet interf
 - DNS server on the LAN
 - gateway on the LAN
 
-```
+```bash
 DNSIP=192.168.1.78
 LOCALIP=192.168.1.114
 GATEWAY=192.168.1.1
@@ -312,13 +312,13 @@ IFACE="host0"
 
 We block the usual setup to prevent any other default values to change our plans
 
-```
+```bash
 ln -sf /dev/null /etc/systemd/network/80-container-host0.network
 ```
 
 Now create a virtual ethernet network with a static IP inside the container
 
-```
+```bash
 cat > /etc/systemd/network/vethernet.network << EOF
 [Match]
 Name=$IFACE
@@ -332,27 +332,27 @@ EOF
 
 Let's check
 
-```
+```bash
 cat /etc/systemd/network/vethernet.network
 ```
 
 If that looks ok we enable and start the systemd network inside the container
 
-```
+```bash
 systemctl enable systemd-networkd.service
 systemctl start systemd-networkd.service
 ```
 
 ...and check the network values
 
-```
+```bash
 ip route show
 ifconfig
 ```
 
 Some note - it seems this sometimes requires quite some time till it works and may take up to 20 seconds out of unknown reasons (no error messages in `journalct -f` on the host). So just wait, experience showed it works, but takes time.
 
-```
+```bash
 # check - wait for some time, it seems to take time till it works...
 ping $GATEWAY
 ping 8.8.8.8
@@ -360,7 +360,7 @@ ping 8.8.8.8
 
 Network should work, we proceed to the hostname of the container
 
-```
+```bash
 # hostname must be the same as above $VNAME
 # $HOSTNAME = $VNAME
 HOSTNAME="aiml-gpu"
@@ -371,7 +371,7 @@ hostname $(cat /etc/hostname)
 
 Again - check and exit
 
-```
+```bash
 hostname
 exit
 ```
@@ -380,7 +380,7 @@ We re-login again to have now a proper hostname at the bash prompt.
 If you do not want to remove ipv6 on the container, just skip the next part.
 It seems that systemd-networkd cannot easily remove ipv6 support.
 
-```
+```bash
 # no ipv6
 # does not seem to work for systemd-networkd anymore
 # https://unix.stackexchange.com/questions/544749/how-to-fully-disable-ipv6-in-lxd-containers-with-systemd-networkd
@@ -395,7 +395,7 @@ EOF
 
 Apply the changes. for that we need `sysctl`
 
-```
+```bash
 apt-get update && apt-get install procps --no-install-recommends
 # we need this to stay away from ipv6
 systemctl restart systemd-networkd.service && sysctl -p && ifconfig
@@ -403,13 +403,13 @@ systemctl restart systemd-networkd.service && sysctl -p && ifconfig
 
 As an alternative we can `echo` it
 
-```
+```bash
 # echo 1 > /proc/sys/net/ipv6/conf/$IFACE/disable_ipv6 
 ```
 
 We switch to the host to prepare ip forwarding and the netfilter bridge kernel module that is required for iptables rules applied to the virtual ethernet device of the container.
 
-```
+```bash
 # outside container
 # we need IP forward and the bridge mode for iptables
 
@@ -422,7 +422,7 @@ The 'br_netfilter' and 'bridge' kernel modules should appear.
 
 The following is required if it is not configured on the host. Check `/etc/sysctl.conf`
 
-```
+```bash
 cat /etc/sysctl.conf | grep forward
 cat /etc/sysctl.conf | grep bridge
 cat >> /etc/sysctl.conf << EOF
@@ -435,7 +435,7 @@ EOF
 
 Apply it by restarting the network and applying the rules configured above.
 
-```
+```bash
 systemctl restart systemd-networkd.service && sysctl -p
 ```
 
@@ -445,7 +445,7 @@ The next step is to create a basic config for systemd-nspawn container to allow 
 AMD and Intel Arc users have to adjust the 'Bind' commands, due to the lack of AMD and Intel GPUs the tutorial cannot cover this part for those GPUs. Sorry.
 At first, we configure X using `xhost`.
 
-```
+```bash
 # access to GPUs for the container
 mkdir -p /etc/systemd/nspawn
 if [ ! -f "/etc/systemd/nspawn/$VNAME.nspawn" ]; then
@@ -500,14 +500,14 @@ fi
 
 Let change to the container to finish the network setup - adjust the values! First we have to login.
 
-```
+```bash
 # inside container
 machinectl login $VNAME
 ```
 
 And then we proceed inside the running container.
 
-```
+```bash
 # we use static DNS
 DNS1=192.168.1.78
 DNS2=192.168.1.64
@@ -522,27 +522,27 @@ EOF
 
 Check the values and temporarily secure the DNS entry against any changes.
 
-```
+```bash
 cat /etc/resolv.conf
 ```
 
 Check what is written for DNS, we drop this later anyway. Later we do not want this changed by any process, so we make it r/o. There are better options, but it works. Normally `/etc/resolv.conf` is a link to `/run/systemd/resolve/resolv.conf` managed by systemd-resolved.
 
-```
+```bash
 chmod -w /etc/resolv.conf
 ls -la /etc/resolv.conf
 ```
 
 Check DNS:
 
-```
+```bash
 ping 8.8.8.8
 ping google.de
 ```
 
 Now switch back to the host. First we stop the container.
 
-```
+```bash
 # outside container
 
 # more security stuff
@@ -553,27 +553,27 @@ machinectl stop $VNAME
 
 Now we own the container by root on host and restrict the container.
 
-```
+```bash
 systemd-nspawn -D $OFFICIALPATH/$VNAME --private-users=0 --private-users-chown --machine $VNAME
 exit
 ```
 
 If not done yet
 
-```
+```bash
 ls -la $OFFICIALPATH/$VNAME
 ```
 
 This should be owned by `root`, otherwise do
 
-```
+```bash
 chown root:root $OFFICIALPATH/$VNAME
 ```
 
 Check the ownerships of the container. We use 'less' and it creates quite some output and we can check with `less`.
 If we don't have `less` yet, just install it on host with
 
-```
+```bash
 apt-get install less --no-install-recommends
 ls -Ralh $OFFICIALPATH/$VNAME | less
 ```
@@ -586,7 +586,7 @@ No strange numbers (owners) should appear.
 We work with NVIDIA and to prepare entries below `/dev` for NVIDIA we use some script from Nvidia itself and extend it a little bit.
 AMD + Intel Arc users have to find equivalents for their GPUs. It is important to have all entries below `/dev`.
 
-```
+```bash
 if [ ! -f "$ROOT/preparenspawngpu" ]; then
   echo "$ROOT/preparenspawngpu does not exist, will create it."
   cat > $ROOT/preparenspawngpu << EOF
@@ -646,7 +646,7 @@ fi
 
 We apply the script right away.
 
-```
+```bash
 chmod +x $ROOT/preparenspawngpu
 $ROOT/preparenspawngpu
 # look for any error messages
@@ -658,7 +658,7 @@ Each time you boot the computer this script should be run, otherwise if device e
 We switch back to the running container and prepare the nvidia drivers.
 
 
-```
+```bash
 # inside container
 
 # if ever you are not logged in or the container does not run, do as root
@@ -685,7 +685,7 @@ curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -
 
 We need some local Debian mirror, choose one that is near you:
 
-```
+```bash
 ARCH=amd64
 LOCALMIRROR="ftp2.de.debian.org"
 # add $LOCALMIRROR to your $VNAME_BP/whitelisteddomains.txt
@@ -702,14 +702,14 @@ EOF
 
 Re-check on the host, because the nvidia driver must be the same version on the host as well as inside the container.
 
-```
+```bash
 # outside container
 dpkg -l | grep nvidia
 ```
 
 Switch back to the container
 
-```
+```bash
 # inside container
 
 # nvidia driver + browser
@@ -721,7 +721,7 @@ At some point the call above leads to asking you to configure your keyboard. Jus
 
 Now we create users. Use names as you like it and apply a password for each user.
 
-```
+```bash
 # create users, change according to your needs
 # one user for AI/ML stuff
 USERAI="aiml"
@@ -733,7 +733,7 @@ adduser $USER
 
 Switch to the host to edit some nspawn specific touch related to GPU.
 
-```
+```bash
 # outside of container
 
 # enable/ allow nvidia stuff
@@ -742,7 +742,7 @@ systemctl edit systemd-nspawn@aiml-gpu.service
 
 This opens up an editor where you have to copy the following lines into it where it is stated to put values.
 
-```
+```bash
 # copy the following into the part where it is stated that configs should be out - at the beginning:
 [Service]
 DeviceAllow=/dev/nvidiactl
@@ -759,27 +759,27 @@ DeviceAllow=block-loop rwm
 Save the file and exit the editor. It doesn't matter which editor you use like `joe`, `nano`, `vi`, etc.
 As an alternative, you can write directly to `/etc/systemd/system/systemd-nspawn@aiml-gpu.service.d/override.conf`
 
-```
+```bash
 cat /etc/systemd/system/systemd-nspawn@aiml-gpu.service.d/override.conf
 ```
 
 We have to reboot the container
 
-```
+```bash
 # reboot machine
 machinectl reboot $VNAME
 ```
 
 Let's go back to the container
 
-```
+```bash
 # inside container
 machinectl login $VNAME
 ```
 
 Now, login as user $USERAI and not as root, because the `nvidia-smi` does not work if called as `root`. So you should be a user.
 
-```
+```bash
 # check for nvidia, must give some meaningful output about accessible NVIDIA GPUs
 nvidia-smi
 nvtop
@@ -791,7 +791,7 @@ We switch now to a user on the host, not as `root`, because we deal now with X f
 > [!CAUTION]
 > Never allow a `xhost +` on your computer, then everybody can connect via X (!) We restrict it to `local`.
 
-```
+```bash
 # outside container as desktop user (not root!)
 # never do just 'xhost +' - this would enable *everyone* to connect to you
 xhost +local:
@@ -802,14 +802,14 @@ xhost +local:
 
 Now we try it from the container, first login as user
 
-```
+```bash
 # inside container
 machinectl login $VNAME
 ```
 
 We login as user $BROWSER. Before we are able to use any X application, we have to set the `$DISPLAY` variable properly. For the `xhost` method it is the following:
 
-```
+```bash
 # before starting any X application it requires to set $DISPLAY!
 # we will make it better later, but to test it is ok to use xhost
 # xhost method
@@ -821,35 +821,35 @@ There is an alternative to the `xhost` method which is more secure - a nested X 
 
 First we install it on the host, switch to `root` on the host
 
-```
+```bash
 # outside container
 apt-get install xserver-xephyr
 ```
 
 Some changes in the configs are required. In `/etc/systemd/nspawn/$VNAME.nspawn` replace the `DISPLAY` entry:
 
-```
+```bash
 # in /etc/systemd/nspawn/$VNAME.nspawn replace
 Environment=DISPLAY=:0.0
 ```
 
 by
 
-```
+```bash
 #Environment=DISPLAY=:0.0
 Environment=DISPLAY=:1
 ```
 
 and
 
-```
+```bash
 BindReadOnly=/tmp/.X11-unix
 BindReadOnly=$HOMIE/.Xauthority
 ```
 
 by
 
-```
+```bash
 # xhost/ xauth
 #BindReadOnly=/tmp/.X11-unix
 #BindReadOnly=/home/leo/.Xauthority
@@ -860,7 +860,7 @@ BindReadOnly=/tmp/.X11-unix/X1
 Save the file and exit the editor.
 On the host as desktop user start the nested xserver with the following values (screen size)
 
-```
+```bash
 # start nested X-server use user on the host
 #Xephyr -screen 1920x1080 -ac :1
 Xephyr :1 -resizeable
@@ -868,21 +868,21 @@ Xephyr :1 -resizeable
 
 A new window pops up, change to another terminal as `root` and to be sure reboot the container so the `DISPLAY` variable can properly be accessed.
 
-```
+```bash
 # if you cannot get the DISPLAY:1 in the container, reboot it
 machinectl reboot $VNAME
 ```
 
 Again, log into the container as user $BROWSER.
 
-```
+```bash
 # inside container as $BROWSER
 machinectl login $VNAME
 ```
 
 And set the `DISPLAY` variable and start the browser (here: firefox):
 
-```
+```bash
 export DISPLAY=:1
 firefox-esr
 ```
@@ -900,7 +900,7 @@ We use the user $USERAI on the container to install the conda environment. Befor
 - install and run AI/ML engines as user $USERAI
 - use the browser for webUI interaction as user $BROWSER
 
-```
+```bash
 # inside container
 # install AI/ML engines as $USERAI
 # start with minoconda or some virtual python env
@@ -916,7 +916,7 @@ apt-get install git --no-install-recommends
 
 Now switch to user $USERAI
 
-```
+```bash
 # inside container
 
 # installation miniconda + ComfyUI + ComfyUI-Manager
@@ -931,13 +931,13 @@ chmod +x ~/Miniconda3-latest-Linux-x86_64.sh
 
 For the install use the default values. It is ok to change the behavior that miniconda is "active" after log in. So after install you have to log out and relogin.
 
-```
+```bash
 ~/Miniconda3-latest-Linux-x86_64.sh
 ```
 
 Log out and log in again as user $USERAI.
 
-```
+```bash
 # log out and log in as $USERAI
 # create python env
 conda create --name comfyui-exp python=3.11
@@ -948,7 +948,7 @@ conda activate comfyui-exp
 
 Before installing AI/ML engines, we do some more SECURITY. We switch to the host as `root` and activate the iptables script. Check the values within the script before running it. But it asks you anyay whether values are ok.
 
-```
+```bash
 # outside container
 
 # THIS ENTRY MUST MATCH THE ACTUAL IP of the container
@@ -966,7 +966,7 @@ $ROOT/NSPAWN_iptables-etc_v3
 
 Go back to the running container
 
-```
+```bash
 # inside container as $USERAI
 
 # ComfyUI + ComfyUI-Manager
@@ -977,7 +977,7 @@ cd ~/ComfyUI
 
 We start NOW with some common sense - ie. have a look at python requirements BEFORE installing them. This may sound strange, arbitrary, time consuming, etc. and somehow it is, but you will get a better feeling what you do if you install things. First look into the requirements for ComfyUI itself.
 
-```
+```bash
 cat requirements.txt
 cd ~/ComfyUI/custom_nodes
 git clone https://github.com/ltdrdata/ComfyUI-Manager.git
@@ -986,7 +986,7 @@ cd ComfyUI-Manager
 
 So let's have a look at python requirements BEFORE installing ComfyUI-Manager
 
-```
+```bash
 cat requirements.txt
 cd ../..
 pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu121 --dry-run
@@ -994,14 +994,14 @@ pip install torch torchvision torchaudio --extra-index-url https://download.pyto
 
 In principle, you can check for malware after EACH `--dry-run`
 
-```
+```bash
 pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu121
 pip install -r requirements.txt --dry-run
 ```
 
 Again, now you can check the downloaded files and you start keeping a log what you install. If everything is ok (e.g. scan with virus scanner engine), proceed with really installing the requirements for ComfyUI, and then proceed with ComfyUI-Manager.
 
-```
+```bash
 pip install -r requirements.txt
 cd custom_nodes/ComfyUI-Manager
 pip install -r requirements.txt --dry-run
@@ -1009,7 +1009,7 @@ pip install -r requirements.txt --dry-run
 
 Again - check the downloaded files... and proceed only then.
 
-```
+```bash
 pip install -r requirements.txt
 cd ../..
 # start ComfyUI
@@ -1018,7 +1018,7 @@ python main.py
 
 If ComfyUI starts properly, log in separately on a different terminal as user $BROWSER into the container. Either use the `xhost` method or the nested xserver `xephyr`. We use the `xhost` method here. If it cannot connect, allow on the host as desktop user with `xhost +local:` and re-try.
 
-```
+```bash
 # xhost method
 export DISPLAY=:0.0
 firefox-esr
@@ -1117,14 +1117,15 @@ The following commands should be called from inside container as `root`.
 
 An example - just a check what should be done BEFORE installation
 
-```
+```bash
 apt-get install firefox-esr
 ```
 
 Break if you do not want to do that... count the number of packages...
 
 - You can restrict packages with
-```
+
+```bash
 apt-get install --no-install-recommends [packages]
 ```
 
@@ -1136,12 +1137,14 @@ apt-get install --no-install-recommends [packages]
 There are some browser examples under Linux
 
 - netsurf
-```
+
+```bash
 apt-get install netsurf-gtk
 ```
 
-- palemoon https://www.palemoon.org/download.shtml
-```
+- [palemoon]{https://www.palemoon.org/download.shtml}
+
+```bash
 apt-get install libdbus-glib-1-2
 # check for latest version before downloading
 wget http://linux.palemoon.org/datastore/release/palemoon-32.0.0.linux-x86_64-gtk3.tar.xz
@@ -1151,9 +1154,9 @@ tar -xvf palemoon-32.0.0.linux-x86_64-gtk3.tar.xz
 ./palemoon/palemoon # as user
 ```
 
-- midori https://astian.org/midori-browser/download/linux/
+- [midori]{https://astian.org/midori-browser/download/linux}
 
-```
+```bash
 # download manually and install from that directory
 dpkg -i midori_11.3.3_amd64.deb
 # if it complains about missing libs, uncomment the following to install them
@@ -1164,9 +1167,9 @@ midori
 There are incidents when the browser version really does not fit to the OS, then drop that or invest time...
 We want to keep it simple: we won't go to the net, we just need the browser for local access to AI/ML engines, so no need to invest much as $USER.
 
-- vivaldi https://www.vivaldi.com
+- [vivaldi]{https://www.vivaldi.com}
 
-```
+```bash
 # check for latest version before downloading
 wget https://downloads.vivaldi.com/stable/vivaldi-stable_6.8.3381.48-1_amd64.deb
 dpkg -i vivaldi-stable_6.8.3381.48-1_amd64.deb
@@ -1179,7 +1182,7 @@ vivaldi
 ```
 
 - firefox
-```
+```bash
 apt-get install firefox-esr
 # as $USER
 firefox-esr
@@ -1205,7 +1208,7 @@ The same is true for nvidia closed source repo drivers, but we have no other cho
 
 It's a good choice to enable automatic security updates not just on the host but also inside the container.
 
-```
+```bash
 # https://phoenixnap.com/kb/automatic-security-updates-ubuntu
 apt-get update
 apt-get install unattended-upgrades --no-install-recommends
@@ -1213,7 +1216,7 @@ apt-get install unattended-upgrades --no-install-recommends
 
 Now use your editor of choice. Install an editor you like, ... put in the name
 
-```
+```bash
 EDITORNAME="joe"
 EDITOR=$(which $EDITORNAME)
 $EDITOR /etc/apt/apt.conf.d/50unattended-upgrades
@@ -1221,13 +1224,14 @@ $EDITOR /etc/apt/apt.conf.d/50unattended-upgrades
 
 and comment out:
 
-```
+```bash
 # comment out:
 //        "origin=Debian,codename=${distro_codename},label=Debian";
 ```
 
 We want only security updates which we want automatically
-```
+
+```bash
 systemctl restart unattended-upgrades
 systemctl status unattended-upgrades
 ```
@@ -1236,21 +1240,21 @@ systemctl status unattended-upgrades
 
 We reduce our `/etc/apt/sources.list` to nvidia stuff and security updates. Be aware that you may have to reverse that in case nvidia updates would require other system libraries to be updated. Then add the original `sources.list`, so we need to back it up.
 
-```
+```bash
 # outside of container
 cp $OFFICIALPATH/$VNAME/etc/apt/sources.list $ROOT/$VNAME_etc-apt_sources.list_full-BP
 ```
 
-You can restore with
+You can restore it with
 
-```
+```bash
 # restore it with
 cp $ROOT/$VNAME-etc-apt_sources.list_full-BP $OFFICIALPATH/$VNAME/etc/apt/sources.list
 ```
 
 To reduce the `sources.list` to only nvidia and security updates.
 
-```
+```bash
 # look whether localmirror is still ok
 echo $LOCALMIRROR
 
@@ -1269,19 +1273,19 @@ deb http://security.debian.org/debian-security trixie-security main contrib non-
 This will allow only security updates, be aware to install something else you have to re-enable the removed entries.
 We can secure this against overwriting. First create a backup and see how to restore it.
 
-```
+```bash
 # make a backup
 cp $OFFICIALPATH/$VNAME/etc/apt/sources.list $ROOT/$VNAME_etc-apt_sources.list_red-BP
 ```
 
-```
+```bash
 # restore
 cp $ROOT/$VNAME_etc-apt_sources.list_red-BP $OFFICIALPATH/$VNAME/etc/apt/sources.list
 ```
 
 We use 'chattr' to make it r/o
 
-```
+```bash
 chattr +i $OFFICIALPATH/$VNAME/etc/apt/sources.list
 ```
 
@@ -1293,24 +1297,24 @@ As long as AI/ML webUIs do not implement strict security measures (almost imposs
 
 - Enable/ disable network of the container by the host
 
-```
-#    on host:
-#    IFACE = "vb-$CONTAINERNAME"
-#    ip link set $IFACE up
+```bash
+# on host:
+IFACE = "vb-$CONTAINERNAME"
+ip link set $IFACE up
 ```
 
 Disable:
 
-```
-#    on host:
-#    IFACE = "vb-$CONTAINERNAME"
-#    ip link set $IFACE down
+```bash
+# on host:
+IFACE = "vb-$CONTAINERNAME"
+ip link set $IFACE down
 ```
 
 Check:
 
-```
-    ip link | grep $IFACE
+```bash
+ip link | grep $IFACE
 ```
 
 - After installing a plugin, start it with disabled network and see whether it complains or does not work.
@@ -1338,7 +1342,7 @@ download.pytorch.org
 files.pythonhosted.org
 ```
 
-```
+```bash
 # cat /var/lib/machines/aiml-gpu/etc/hosts
 ```
 
@@ -1458,14 +1462,14 @@ The tutorial basically works for multiple GPUs. But at first it is limited to on
 
 Sometimes often one does not use or need ipv6. But it seems that systemd-networkd does not allow an easy removal of ipv6 although it should! Thus, just do either a
 
-```
+```bash
 echo 1 > /proc/sys/net/ipv6/conf/default/disable_ipv6
 echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
 ```
 
 or add some entry in /etc/sysctl.conf and do
 
-```
+```bash
 echo "# Disabling the IPv6
 net.ipv6.conf.all.disable_ipv6 = 1
 net.ipv6.conf.default.disable_ipv6 = 1
@@ -1478,13 +1482,13 @@ ifconfig
 
 But this would be necessary to perform after every network restart like
 
-```
+```bash
 systemctl restart systemd-networkd
 ```
 
 So you can disable ipv6 kernel modules
 
-```
+```bash
 echo "blacklist ipv6" >> /etc/modprobe.d/blacklist-ipv6.conf
 # update initramfs
 update-initramfs -u
@@ -1494,7 +1498,7 @@ reboot
 
 After the next log in check for kernel modules
 
-```
+```bash
 lsmod | grep ipv6
 ```
 
@@ -1504,9 +1508,9 @@ The iptables rules allow only for ipv4 addresses, so ipv6 does not make much sen
 
 ### End of the tutorial
 
-The tutorial goes up to the point to use Nvidia GPU within the nspawn-container to be able use ComfyUI with the default template for image generation. For that one has to manually download a model, e.g. SDXL base model. If an image is generated, ecerything else will work, it means proper GPU passthrough into the container is functioning. You can also check that with
+The tutorial goes up to the point to use Nvidia GPU within the nspawn-container to be able use ComfyUI with the default template for image generation. For that one has to manually download a model, e.g. SDXL base model. If an image is generated, ecerything else will work, it means proper GPU passthrough into the container is functioning. You can always check that with
 
-```
+```bash
 nvidia-smi
 nvtop
 ```
@@ -1523,7 +1527,7 @@ To be a little bit more secure, one should work the following way:
 3- Do a `pip install [...] --dry-run` from within the plugin directory which downloads the stuff but does not install anything. Now scan those new files with a virus scanner, scan the repo python code visually for any strange or binary stuff, etc., and only if that looks ok, install without `--dry-run` switch, and restart comfyui.
 4- Maintain logfiles for each plugins download like
 
-```
+```bash
 pip install -r requirements.txt --dry-run 2>&1 | tee ~/$PLUGINNAME.log
 ```
 
@@ -1534,21 +1538,20 @@ As long as the ComfyUI-Manager does not integrate some `pip install [...] --dry-
 In the end one is self-responsible at every step, and one should not outsource common sense to software. This does not mean one cannot be infected, and for such a case the container should provide a basic protection. That means within the container no personal data etc. should be ever stored. The container with proper iptables rules (check that manually whether it works!) should be restricted and it should not be possible to reach the LAN.
 
 
-### Further tutorials on nspawn
+### Further tutorials on systemd-nspawn
 
 The following tutorials are good starting points to understand nspawn a little bit better, and it covers scenarios not touched by the tutorial. Most are focused on Debian/ Ubuntu/ Arch/ Fedora Linux based distributions.
 
-Debian
-https://wiki.debian.org/nspawn
-https://wiki.arcoslab.org/tutorials/tutorials/systemd-nspawn
-https://ramsdenj.com/posts/2016-09-22-containerizing-graphical-applications-on-linux-with-systemd-nspawn/
-https://blog.karmacomputing.co.uk/using-systemd-nspawn-containers-with-publicly-routable-ips-ipv6-and-ipv4-via-bridged-mode-for-high-density-testing-whilst-balancing-tenant-isolation/
-Ubuntu https://clinta.github.io/getting-started-with-systemd-nspawnd/
-Arch https://wiki.archlinux.org/title/Systemd-nspawn
-Fedora https://docs.fedoraproject.org/en-US/fedora-server/containerization/systemd-nspawn-setup/
-esp. (manual) network setup https://www.cocode.se/linux/systemd_nspawn.html
-https://www.cocode.se/linux/systemd_nspawn.html
-https://askubuntu.com/questions/590319/how-do-i-enable-automatically-nvidia-uvm
+- [Debian nspawn]{https://wiki.debian.org/nspawn}
+- [nspawn]{https://wiki.arcoslab.org/tutorials/tutorials/systemd-nspawn
+- [graphical apps with nspawn]{https://ramsdenj.com/posts/2016-09-22-containerizing-graphical-applications-on-linux-with-systemd-nspawn}
+- [nspawn and network]{https://blog.karmacomputing.co.uk/using-systemd-nspawn-containers-with-publicly-routable-ips-ipv6-and-ipv4-via-bridged-mode-for-high-density-testing-whilst-balancing-tenant-isolation}
+- [Ubuntu]{https://clinta.github.io/getting-started-with-systemd-nspawnd}
+- [Arch]{https://wiki.archlinux.org/title/Systemd-nspawn}
+- [Fedora]{https://docs.fedoraproject.org/en-US/fedora-server/containerization/systemd-nspawn-setup}
+- [manual network setup]{https://www.cocode.se/linux/systemd_nspawn.html}
+- [nspawn]{https://www.cocode.se/linux/systemd_nspawn.html
+- [nvidia uvm]{https://askubuntu.com/questions/590319/how-do-i-enable-automatically-nvidia-uvm
 
 
 ### DISCLAIMER
