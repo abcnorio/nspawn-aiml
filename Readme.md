@@ -2,7 +2,9 @@
 
 ## Advance Organizer
 
-The tutorial uses a systemd based chroot environment (jail) to prevent the content of the container to access the LAN or internet except for whitelisted domains and to deny all access to the host and its content like personal data, passwords, etc. The firewall iptables rules from the host work on the combination of IP address and virtual ethernet device name of the container. For AI/ML the GPU can be used from within the container within a conda environment. Within the container the AI/ML engine user is separated from the user who calls a browser for webUI interaction. No personal data must be stored within the container. The host also prevents certain files to be changed by the container (e.g. no DNS allowed). The approach does not prevent from infection, but makes it much harder in case of infection to let personal data be stolen or any other harm done. In case of infection the container can be wiped and replaced by an infected-free version.
+The goal is to restrict access of AI/ML engines to network, other computers and data, etc. without inhibiting their tasks (e.g. image generation).
+
+The tutorial uses a systemd based chroot environment (jail) to prevent the container and running processes to access the LAN or internet except for whitelisted domains and to deny all access to the host to protect personal data, passwords, etc. The firewall iptables rules from the host work based on a combination of IP address and virtual ethernet device name of the container (viewed from the host's perspective). For AI/ML the GPU(s) can be used from within the container making use of a conda environment. Within the container the AI/ML engine user is separated from the user who calls a browser for webUI interaction. No personal data must be stored within the container. AI/ML models should be bound r/o into the container. The host prevents certain files from being changed by the container (e.g. no DNS allowed). The approach does not prevent from infection, but makes it much harder in case of infection to let personal data be stolen or any other harm done. In case of infection the container can be wiped and replaced by an infected-free version. This is enhanced by certain general suggestions to enhance security while working with rapid changing environments like AI/ML engines. This requires more manual work, python dry-runs, and common sense - not necessarily an automatic process.
 
 ## Overview
 
@@ -22,11 +24,11 @@ At the beginning of each file you have to adjust values according to local needs
 
 The tutorial is mostly "copy & paste work" using different terminals:
 
-- on host as root
-- on host as user (only to start nested xserver if needed)
-- on container as root
-- on container as user for AI/ML stuff (e.g. create cond environment, start ComfyUI engine, ...)
-- on container as user only for browser and interacting with the webUI
+- on host as `root`
+- on host as `desktop user` (only to start nested xserver if needed)
+- in container as `root`
+- in container as `user1` (`$USERAI`) for AI/ML stuff (e.g. create cond environment, start ComfyUI engine, ...)
+- in container as `user2` (`$BROWSER`) only for browser and interacting with the webUI
 
 So you need some terminals... if in one terminal the initial values (see scripts) are missing, go back to the start of the script and copy the appropriate parts into the terminal and check them for accuracy. Be aware that values between host and container naturally differ ie. keep in mind which terminal you use at this very moment.
 
@@ -37,7 +39,7 @@ Some of the comments in the scripts may be helpful, otherwise just ignore them.
 In the following terms are used
 
 - `outside container` = work as root on the host
-- `inside container` = work after login to container (start that on the host with 'machinectl login $VNAME', see below)
+- `inside container` = work after login to container, start the login on the host with `machinectl login $VNAME`, see below
 
 First, look into the script and change names and variables according to your wishes.
 
@@ -139,8 +141,8 @@ debootstrap  --arch $ARCH --variant=minbase --include=systemd-container,systemd,
 Out example covers a host with bridge `br0`, a static IP for the host, and later we apply a static IP to the container as well. Proceed only if you do not have already a bridge.
 
 > [!CAUTION]
-> READ GUIDES FOR YOUR SPECIFIC OS how to do that (!)
-> DO NOT TRY to let the network be managed by more than one service (!). Choose ONLY one, and then apply this service.
+- READ GUIDES FOR YOUR SPECIFIC OS how to create a bridge if there is none (!)
+- DO NOT TRY to let the network be managed by more than one service (!) Choose ONLY one, and then apply this service consequently.
 
 If you do not want to create a bridge with systemd, look for alternatives (/etc/network/interfaces, NetworkManager/nmcli, bridge-utils/brctl, ...), and apply those tools.
 
@@ -583,7 +585,7 @@ No strange numbers (owners) should appear.
 
 ### Prepare GPU
 
-We work with NVIDIA and to prepare entries below `/dev` for NVIDIA we use some script from Nvidia itself and extend it a little bit.
+We work with NVIDIA and to prepare entries below `/dev` for NVIDIA we use some script from [NVIDIA](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#runfile-verifications) itself and extend it a little bit.
 AMD + Intel Arc users have to find equivalents for their GPUs. It is important to have all entries below `/dev`.
 
 ```bash
@@ -727,8 +729,8 @@ Now we create users. Use names as you like it and apply a password for each user
 USERAI="aiml"
 adduser $USERAI
 # one user just to use the browser
-USER="browser"
-adduser $USER
+BROWSER="browser"
+adduser $BROWSER
 ```
 
 Switch to the host to edit some nspawn specific touch related to GPU.
@@ -847,12 +849,12 @@ BindReadOnly=/tmp/.X11-unix
 BindReadOnly=$HOMIE/.Xauthority
 ```
 
-by
+by (replace `$USER` by the desktop username)
 
 ```bash
 # xhost/ xauth
 #BindReadOnly=/tmp/.X11-unix
-#BindReadOnly=/home/leo/.Xauthority
+#BindReadOnly=/home/$USER/.Xauthority
 # xephyr
 BindReadOnly=/tmp/.X11-unix/X1
 ```
@@ -1052,7 +1054,7 @@ There is no reason to allow for more from within the container even models can b
 > [!WARNING]
 > We do not cover here the usage of malware scanners, rootkit detectors, and audits. That requires serious in-depth knowledge of systems, esp. because detection does not mean hardening.
 
-However, if some is interested in that topic, please visit the following security related pages for Linux.
+However, if some is interested in that topic, please visit the following security related pages for Linux. All pages lead to external resources (checked 2024-08-29).
 
 - [malware detection tools](https://linuxsecurity.expert/security-tools/linux-malware-detection-tools)
 - [malware and rootkits](https://www.tecmint.com/scan-linux-for-malware-and-rootkits)
@@ -1085,14 +1087,13 @@ And for the people who know what they do.. btw - not everything is FOSS and this
 For those again who are from the IT world 'apparmor' and 'SELinux' are good tools to create an additional layer of security. 'firejail' can be compiled with 'apparmor' support, and may be another wrapper around the browser within the container.
 
 > [!TIP]
-> Check the net for what is possible
-> Use several engines parallel to each other
-> Use cron-jobs to check on the container from the host each night
-> Let the cron-job send you a local mail to your admin account with a summary
-> Check after each install of plugins, models, etc. BEFORE starting your AI/ML engine
-
-> Use common sense, have a look at the python code, the requirements, etc., and check what is downloaded and from where
-> Keep a log of everything (e.g. python lib installs) with stderr as well as stdout so you can see the output on the terminal and it is saved in a file:
+- Check the net for what is possible
+- Use several engines parallel to each other
+- Use cron-jobs to check on the container from the host each night
+- Let the cron-job send you a local mail to your admin account with a summary
+- Check after each install of plugins, models, etc. BEFORE starting your AI/ML engine
+- Use common sense, have a look at the python code, the requirements, etc., and check what is downloaded and from where
+- Keep a log of everything (e.g. python lib installs) with stderr as well as stdout so you can see the output on the terminal and it is saved in a file:
 
 ```
 [bash command] 2&>1 | tee logfile.txt
@@ -1131,7 +1132,7 @@ apt-get install --no-install-recommends [packages]
 
 - but check that all dependencies are given, if something fails, install the missing libraries/ tools
 - Start the browser later ALWAYS as $USER and never as $ROOT or $USERAI to keep things separately
-- You can also adjust ownership permissions to separate the users from each other even more with 0660, 0770, etc. so that only user + group have access, but nobody else.
+- You can also adjust ownership permissions to separate the users from each other even more with `0660`, `0770`, etc. so that only user + group have access, but nobody else.
 - $ROOT is only a valid user for system administration, fortunate some browsers like to tell you it is not a good idea to play browser and root at the same time
 
 There are some browser examples under Linux
@@ -1192,10 +1193,10 @@ firefox-esr
 
 In general,
 
-- one can use firejail along with apparmor (requires compilation, add profiles, etc.) https://firejail.wordpress.com/download-2/ and https://github.com/netblue30/firejail
-- or there are additional possibilities with systemd sandboxing https://www.digitalocean.com/community/tutorials/how-to-sandbox-processes-with-systemd-on-ubuntu-20-04
+- one can use firejail [1](https://firejail.wordpress.com/download-2) [2](https://github.com/netblue30/firejail) along with apparmor (requires compilation, add profiles, etc.) 
+- or there are additional possibilities with [systemd sandboxing](https://www.digitalocean.com/community/tutorials/how-to-sandbox-processes-with-systemd-on-ubuntu-20-04)
 
-One can install browsers via snap and flatpak, whether this is more secure is a good question. There are notes on https://flatkill.org/ that doubt the overall security of flatpak and there were two cases of malware on snap. But to be fair this is years ago and was detected rather quickly. So this is no real reason against snap, rather it shows they seem to care about malware. However, the snap store itself is closed source and not FOSS. snap originated from canonical and flatpak originated from redhat. As usual it is a matter of trust and trustworthiness of repositories. To keep it simple we make use of Debian repos and there is no need to abbreviate from the official repos. Unless you take a browser directly from the manufacturer and you have to trust a repo. So the choice is up to you.
+One can install browsers via snap and flatpak, whether this is more secure is a good question. There are notes on [flatkill](https://flatkill.org) that doubt the overall security of flatpak (unclear whether confirmed by third parties!) and there were two cases of malware on snap. But to be fair this is years ago and was detected rather quickly. So this is no real reason against snap, rather it shows they seem to care about malware. However, the snap store itself is closed source and not FOSS. snap originated from canonical and flatpak originated from redhat. As usual it is a matter of trust and trustworthiness of repositories. To keep it simple we make use of Debian repos and there is no need to abbreviate from the official repos. Unless you take a browser directly from the developing company you have to trust a repo. So the choice is up to you.
 
 The same is true for nvidia closed source repo drivers, but we have no other choice at the moment to get the AI/ML stuff working under *nix with nvidia GPUs.
 
@@ -1328,7 +1329,8 @@ ip link | grep $IFACE
 
 ```
 # whitelisted domains to install everything above
-# cat $VNAME_BP/whitelisteddomains.txt
+cat $VNAME_BP/whitelisteddomains.txt
+
 debian.org
 debian.map.fastlydns.net
 ftp2.de.debian.org
@@ -1343,10 +1345,8 @@ files.pythonhosted.org
 ```
 
 ```bash
-# cat /var/lib/machines/aiml-gpu/etc/hosts
-```
+cat /var/lib/machines/aiml-gpu/etc/hosts
 
-```
 127.0.0.1	localhost
 127.0.1.1	aiml-gpu.anicca-vijja.xx aiml-gpu
 
@@ -1392,7 +1392,7 @@ There are some things to consider seriously - do some research on it if you are 
 
 ### Bridge
 
-There are different services like systemd-networkd, networkmanager, networking sysv service using /etc/network/interfaces, etc. and if one mixes them together while create a bridge one may messes up the system and the network shows arbitrary behavior. That's normal if at least two different services are meant to do the same job at the same time. So do no work remotely while using the tutorial - otherwise you may shut yourself out from the network and the computer. This is not a problem for a local computer and all steps regarding network configuration can be reversed. The tutorial works only with systemd-networkd which means other services are completely disabled. There is no need to remove them completely from the system, but to stop and to disable the services from running is a must. Debian has a good tutorial for systemd-networkd: https://wiki.debian.org/SystemdNetworkd. We work with the static IP on host and on the container, ie. one needs on the LAN
+There are different services like systemd-networkd, networkmanager, networking sysv service using /etc/network/interfaces, etc. and if one mixes them together while create a bridge one may messes up the system and the network shows arbitrary behavior. That's normal if at least two different services are meant to do the same job at the same time. So do no work remotely while using the tutorial - otherwise you may shut yourself out from the network and the computer. This is not a problem for a local computer and all steps regarding network configuration can be reversed. The tutorial works only with systemd-networkd which means other services are completely disabled. There is no need to remove them completely from the system, but to stop and to disable the services from running is a must. Debian has a good tutorial for [systemd-networkd](https://wiki.debian.org/SystemdNetworkd). We work with the static IP on host and on the container, ie. one needs on the LAN
 
 - two IPs, one for the host, one for the guest
 - both IPs have to be static, ie. permanently bound to host and guest
@@ -1540,7 +1540,7 @@ In the end one is self-responsible at every step, and one should not outsource c
 
 ### Further tutorials on systemd-nspawn
 
-The following tutorials are good starting points to understand nspawn a little bit better, and it covers scenarios not touched by the tutorial. Most are focused on Debian/ Ubuntu/ Arch/ Fedora Linux based distributions.
+The following tutorials are good starting points to understand nspawn a little bit better, and it covers scenarios not touched by the tutorial. Most are focused on Debian/ Ubuntu/ Arch/ Fedora Linux based distributions. The following links all lead to external resources (checked 2024-08-29).
 
 - [Debian nspawn](https://wiki.debian.org/nspawn)
 - [nspawn](https://wiki.arcoslab.org/tutorials/tutorials/systemd-nspawn)
