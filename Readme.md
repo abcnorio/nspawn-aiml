@@ -897,10 +897,11 @@ firefox-esr
 ### Install conda environment and AI/ML engine
 
 Now the environment is basically ready to be used for AI/ML engines like ComfyUI, fooocus, stable swarm, etc.
-We use the user $USERAI on the container to install the conda environment. Before that we have to install `git` as `root`. Basically,
+We use the user `$USERAI` on the container to install the conda environment. Before that we have to install `git` as `root`. Basically,
 
-- install and run AI/ML engines as user $USERAI
-- use the browser for webUI interaction as user $BROWSER
+- install and run AI/ML engines as user `$USERAI`
+- use the browser for webUI interaction as user `$BROWSER`
+- use `root` only if system administration is required
 
 ```bash
 # inside container
@@ -916,7 +917,7 @@ We use the user $USERAI on the container to install the conda environment. Befor
 apt-get install git --no-install-recommends
 ```
 
-Now switch to user $USERAI
+Now switch to user `$USERAI`
 
 ```bash
 # inside container
@@ -1030,7 +1031,7 @@ Go to ComfyUI-Manager, install a SD model, and use the default template to creat
 If that works, the rest will work as well...
 
 
-### Network restrictions for the container
+### Network restrictions of the container
 
 Let's have a loot at the whitelisted domains used for the iptables script by default.
 
@@ -1052,7 +1053,7 @@ Let's have a loot at the whitelisted domains used for the iptables script by def
 There is no reason to allow for more from within the container even models can be downloaded manually from civitai or huggingface and checked by malware/ virus scanner unless you really want ComfyUI-Manager to do that. Then you have to keep track of whitelisted domains. Better keep the whitelist simple and short. There is no need to go to the internet from within the container except for installing AI/ML engines or updating/ extending them.
 
 > [!WARNING]
-> We do not cover here the usage of malware scanners, rootkit detectors, and audits. That requires serious in-depth knowledge of systems, esp. because detection does not mean hardening.
+> We do not cover here the usage of malware scanners, rootkit detectors, and audits. That requires serious in-depth knowledge of systems, esp. because *detection does not mean hardening*. Here, diagnostics is not already applied intervention.
 
 However, if some is interested in that topic, please visit the following security related pages for Linux. All pages lead to external resources (checked 2024-08-29).
 
@@ -1062,15 +1063,15 @@ However, if some is interested in that topic, please visit the following securit
 - [sandboxing with systemd](https://www.digitalocean.com/community/tutorials/how-to-sandbox-processes-with-systemd-on-ubuntu-20-04)
 
 > [!IMPORTANT]
-> A - not complete - list of virus scanners, rootkit detectors, etc. We have not tested each and do not have the knowledge to give a competent decision which engine is adequate for which task. The tutorial cannot cover that.
+> A - not complete - list of virus scanners, rootkit detectors, etc. is given below. We have not tested each and do not have the knowledge to give a competent decision which engine is adequate for which task. The tutorial cannot cover that.
 
 - clamav (virus scanner with [on-access scanning](https://docs.clamav.net/manual/Usage/Scanning.html#on-access-scanning))
-- rkhunter ( rootkit detection)
+- rkhunter (rootkit detection)
 - lynis (audit tool of system tools, can be applied to a container as well)
 - chkrootkit (check for rootkits)
 - LMD (linux malware detect)
 
-And for the people who know what they do.. btw - not everything is FOSS and this is just a list of possibilities, not a recommendation:
+And for the people who know what they do.. btw - not everything is FOSS and this is just a list of possibilities, not a recommendation (listed in alphabetical order):
 
 - AIDE
 - maltrail
@@ -1095,7 +1096,7 @@ For those again who are from the IT world 'apparmor' and 'SELinux' are good tool
 - Use common sense, have a look at the python code, the requirements, etc., and check what is downloaded and from where
 - Keep a log of everything (e.g. python lib installs) with stderr as well as stdout so you can see the output on the terminal and it is saved in a file:
 
-```
+```bash
 [bash command] 2&>1 | tee logfile.txt
 ```
 
@@ -1135,7 +1136,7 @@ apt-get install --no-install-recommends [packages]
 - You can also adjust ownership permissions to separate the users from each other even more with `0660`, `0770`, etc. so that only user + group have access, but nobody else.
 - $ROOT is only a valid user for system administration, fortunate some browsers like to tell you it is not a good idea to play browser and root at the same time
 
-There are some browser examples under Linux
+Here are some browser examples under Linux:
 
 - netsurf
 
@@ -1419,7 +1420,7 @@ What can be found on the net is that using Xephyr is more secure than xhost. So 
 Some things may not look very elegant: E.g. to prevent any changes to `/etc/hosts`, `/etc/resolv.conf`, etc. within the guest we use `chattr +i ...` from the host. This works pretty well and can be reversed, but not from within the container.
 
 
-### Restrictions of deb packages
+### Restrictions of *.deb packages
 
 Only security *.debs are allowed and all other repos are blocked by default. Unattended upgrades (security) are enabled. But this can easily be fixed by uncommenting the '#' before the repos if anything is required. We try to keep the system as simple as possible.
 
@@ -1451,11 +1452,11 @@ There is no DNS allowed for the nspawn-container, so all whitelisted domains are
 The whitelist has a path `$VNAME_BP/whitelisteddomains.txt`. The path can be changed in the iptables script.
 
 
-### Nvidia + multiple GPUs
+### NVIDIA + multiple GPUs
 
-The tutorial works with Nvidia GPUs. Due to the lack of AMD or Intel GPUs for AI/ML work the tutorial cannot cover those cases. Sorry.
+The tutorial works with NVIDIA GPUs. Due to the lack of AMD or Intel GPUs for AI/ML work the tutorial cannot cover those cases. Sorry to all those who own such GPUs!
 
-The tutorial basically works for multiple GPUs. But at first it is limited to one GPU and the 2nd is commented out. Trials showed no problems to use two Nvidia GPUs from within the container.
+The tutorial basically works for multiple GPUs. But at first it is limited to one GPU and the 2nd is commented out. Trials showed no problems to use two NVIDIAS GPUs inside the container.
 
 
 ### ipv6
@@ -1508,7 +1509,7 @@ The iptables rules allow only for ipv4 addresses, so ipv6 does not make much sen
 
 ### End of the tutorial
 
-The tutorial goes up to the point to use Nvidia GPU within the nspawn-container to be able use ComfyUI with the default template for image generation. For that one has to manually download a model, e.g. SDXL base model. If an image is generated, ecerything else will work, it means proper GPU passthrough into the container is functioning. You can always check that with
+The tutorial goes up to the point to use NVIDIA GPU within the nspawn-container to be able use ComfyUI with the default template for image generation. For that one has to manually download a model, e.g. SDXL base model. If an image is generated, ecerything else will work, it means proper GPU passthrough into the container is functioning. You can always check that with
 
 ```bash
 nvidia-smi
@@ -1521,26 +1522,27 @@ One should symlink the AI/ML models to external space and download models manual
 
 To be a little bit more secure, one should work the following way:
 
-0- Download only established and well-known plugins. Be cautious in case of new plugins, have a direct manual look at the repo from which you intend to install, look for strange things, look into the source code, posts, etc. Read at the usual places like github discussions, reddit, discord, etc. whether any plugins have not a good reputation.
-1- Download ComfyUI plugins manually, not via the ComfyUI-Manager.
-2- Check the requirements.txt of the new plugin
-3- Do a `pip install [...] --dry-run` from within the plugin directory which downloads the stuff but does not install anything. Now scan those new files with a virus scanner, scan the repo python code visually for any strange or binary stuff, etc., and only if that looks ok, install without `--dry-run` switch, and restart comfyui.
-4- Maintain logfiles for each plugins download like
+1. Download only established and well-known plugins. Be cautious in case of new plugins, have a direct manual look at the repo from which you intend to install, look for strange things, look into the source code, posts, etc. Read at the usual places like github discussions, reddit, discord, etc. whether any plugins have not a good reputation.
+2. Download ComfyUI plugins manually, not via the ComfyUI-Manager.
+3. Check the requirements.txt of the new plugin
+4. Do a `pip install [...] --dry-run` from within the plugin directory which downloads the stuff but does not install anything. Now scan those new files with a virus scanner, scan the repo python code visually for any strange or binary stuff, etc., and only if that looks ok, install without `--dry-run` switch, and restart comfyui.
+5. Maintain logfiles for each plugins download like
 
 ```bash
 pip install -r requirements.txt --dry-run 2>&1 | tee ~/$PLUGINNAME.log
 ```
 
-Do all that from *within* the pyenv/ conda environment from within the container.
+Do all that from *within* the `pyenv`/ `conda` environment inside the container.
 
-As long as the ComfyUI-Manager does not integrate some `pip install [...] --dry-run` routine, it lacks certain security features. After a `--dry-run` you can run a virus scanner or whatever on it bevor actually doing anything. Be aware where stuff is downloaded ie. pyenv/ conda environment folder, ComfyUI folder, etc. Whether the ComfyUI-Manager gets some function on this subject is not clear. Many users may find the procedure outlined above complicated, disturbing, inhibiting, or just stealing their time. So a switch to allow for dry-runs or not is recommended. Good would be the option to scan those folders with an external virus scanner engine like clamav or whatever one uses. Same true to use rootkit detectors. But even using hashes etc. is not enough if a repo is compromised right from the beginning by the people who run it.
+As long as the ComfyUI-Manager does not integrate some `pip install [...] --dry-run` routine with a switch for those who want to use it or not, it lacks certain security features. After a `--dry-run` you can run a virus scanner or whatever on it bevor actually doing anything. Be aware where exactly stuff is downloaded into a `pyenv`/ `conda` environment folder, ComfyUI folder, etc. Whether the ComfyUI-Manager gets some function on this subject is not clear. Many users may find the procedure outlined above complicated, disturbing, inhibiting, or just stealing their time. So a switch to allow for dry-runs or not is recommended. Good would be the option to scan those folders with an external virus scanner engine like clamav or whatever one uses. Same true to enable the (half-)automatic use of rootkit detectors. But even using hashes etc. is not enough if a repo is compromised right from the beginning by the people who run it.
 
-In the end one is self-responsible at every step, and one should not outsource common sense to software. This does not mean one cannot be infected, and for such a case the container should provide a basic protection. That means within the container no personal data etc. should be ever stored. The container with proper iptables rules (check that manually whether it works!) should be restricted and it should not be possible to reach the LAN.
+> [!WARNING]
+> In the end one is self-responsible at every step, and one should not outsource common sense to software. This does not mean one cannot be infected, and for such a case the container should provide a basic protection. That means within the container no personal data etc. should be ever stored. The container with proper `iptables` rules (check that manually whether it works!) should be restricted and it should not be possible to reach the LAN.
 
 
 ### Further tutorials on systemd-nspawn
 
-The following tutorials are good starting points to understand nspawn a little bit better, and it covers scenarios not touched by the tutorial. Most are focused on Debian/ Ubuntu/ Arch/ Fedora Linux based distributions. The following links all lead to external resources (checked 2024-08-29).
+The following tutorials are a good starting point to understand `nspawn` a little bit better, and it covers scenarios not touched by the tutorial. Most are focused on Debian/ Ubuntu/ Arch/ Fedora Linux based distributions. The following links all lead to external resources (checked 2024-08-29).
 
 - [Debian nspawn](https://wiki.debian.org/nspawn)
 - [nspawn](https://wiki.arcoslab.org/tutorials/tutorials/systemd-nspawn)
@@ -1562,5 +1564,13 @@ NO WARRANTY of any kind is involved here. There is no guarantee that the softwar
 
 IF someone has a better and more secure approach, just go ahead and share it. The tutorial here is meant to suggest an approach that can be applied also by users not deeply involved with security. It allows for a certain protection of the host but there is no guarantee to be protected from malware without any active and valid scanners observing computer behavior and downloaded files for content. Best is always to keep personal data completely separate from such productive environment that undergo a rapid change like it is the case with AI/ML. But to be fair, not everyone can afford another computer to keep things separately. For those this tutorial may act as a help or inspiration.
 
+### TODOs
 
+- find a way to enable `xephyr` with enabled windows resize for the browser, as a consequence drop the `xhost` method
+- double cross-check whether `iptables` rules can really drop the `OUTPUT` chain (see script)
+- make installation more (half-)automatic
+- make network setup easier (difficult, too many possibilities in relation to local needs, permissions, etc.)
+- add `bind` switch to mount r/o folders from the host into the container
+- check whether `chattr` can change file attributes from within the container if the host already set those permissions
+- add some cronjobs for on-access scans of the container, esp. for python installs (...some script...)
 
