@@ -1543,15 +1543,15 @@ In the end one is self-responsible at every step, and one should not outsource c
 The following tutorials are good starting points to understand nspawn a little bit better, and it covers scenarios not touched by the tutorial. Most are focused on Debian/ Ubuntu/ Arch/ Fedora Linux based distributions.
 
 - [Debian nspawn](https://wiki.debian.org/nspawn)
-- [nspawn](https://wiki.arcoslab.org/tutorials/tutorials/systemd-nspawn
+- [nspawn](https://wiki.arcoslab.org/tutorials/tutorials/systemd-nspawn)
 - [graphical apps with nspawn](https://ramsdenj.com/posts/2016-09-22-containerizing-graphical-applications-on-linux-with-systemd-nspawn)
 - [nspawn and network](https://blog.karmacomputing.co.uk/using-systemd-nspawn-containers-with-publicly-routable-ips-ipv6-and-ipv4-via-bridged-mode-for-high-density-testing-whilst-balancing-tenant-isolation)
 - [Ubuntu](https://clinta.github.io/getting-started-with-systemd-nspawnd)
 - [Arch](https://wiki.archlinux.org/title/Systemd-nspawn)
 - [Fedora](https://docs.fedoraproject.org/en-US/fedora-server/containerization/systemd-nspawn-setup)
 - [manual network setup](https://www.cocode.se/linux/systemd_nspawn.html)
-- [nspawn](https://www.cocode.se/linux/systemd_nspawn.html
-- [nvidia uvm](https://askubuntu.com/questions/590319/how-do-i-enable-automatically-nvidia-uvm
+- [nspawn](https://www.cocode.se/linux/systemd_nspawn.html)
+- [nvidia uvm](https://askubuntu.com/questions/590319/how-do-i-enable-automatically-nvidia-uvm)
 
 
 ### DISCLAIMER
