@@ -1,0 +1,206 @@
+#!/bin/bash
+
+# maintain whitelisted domains as IPs for container and check IPs
+# apply iptables rules to allow those IPs
+# requires whitelisted domain textfile - see below - as base for IPs and iptables
+
+# check values
+
+CONTAINERNAME="aiml-gpu"
+LOCALDOMAIN="anicca-vijja.xx"
+CONTAINERROOT=/var/lib/machines/$CONTAINERNAME
+CONTAINERIF='vb-'$CONTAINERNAME
+CONTAINERIP=192.168.1.114
+BASE=/root
+CONTAINERBP=$BASE/$CONTAINERNAME'_BP'
+IPTABLES=/usr/sbin/iptables
+
+echo "containername = $CONTAINERNAME"
+echo "local domain = $LOCALDOMAIN"
+echo "container root = $CONTAINERROOT"
+echo "container interface = $CONTAINERIF"
+echo "container IP = $CONTAINERIP"
+echo "base path for backup hosts file, etc. = $BASE"
+echo "container backup path = $CONTAINERBP"
+echo "iptables at $IPTABLES"
+
+read -p "Are all values above correct? (yes/no) " yn
+
+case $yn in
+  yes ) echo "Will proceed...";;
+  no ) echo "Peform changes and restart script."
+       exit;;
+   * ) echo "Wrong rgument, will exist";
+       exit 1;;
+esac
+
+# actual start
+
+# check whether device = IP
+# https://unix.stackexchange.com/questions/558274/extract-interface-name-and-ip-address-from-ifconfig-output
+# must be done inside container
+#IPcand = $(ifconfig | awk '/^$CONTAINTERIF/ { iface = $1; getline; sub("addr:", ""); print $2 }')
+# better to run it outside container
+#line=$(machinectl list --all | grep $CONTAINERNAME)
+#IPcand=$(echo $line | awk -F" " '{ for (i=6; i<=NF; i++) print $i }' | sed -E 's/…//g') #i=6 tested which col we need
+# oneliner # i=6
+IPcand=$(machinectl list --all | grep $CONTAINERNAME | awk -F" " '{ for (i=6; i<=NF; i++) print $i }' | sed -E 's/…//g')
+if [ ! "$IPcand" == "$CONTAINERIP" ]; then
+  echo "IP of device $IPcand does not match expecation: $CONTAINERIP. Will exit - please check!"
+#  exit 1
+else
+  echo "IP of device $IPcand matches expectation: $CONTAINERIP - will proceed."
+fi
+
+# we disable network for the container while doing changes to iptables
+echo "Bring interface $CONTAINERIF down."
+ip link set $CONTAINERIF down
+
+# check whether backup folder exists
+if [ ! -d $CONTAINERBP/etc ]; then
+  echo "Folder $CONTAINERBP/etc does not exist, will create it."
+  mkdir -p $CONTAINERBP/etc
+else
+  echo "Folder $CONTAINERBP/etc exists."
+fi
+
+# check previous version
+if [ ! -f $CONTAINERBP/etc/hosts.md5 ]; then
+  echo "$CONTAINERBP/etc/hosts.md5 file does not exist. Will create it. Check it manually."
+  md5sum $CONTAINERROOT/etc/hosts > $CONTAINERBP/etc/hosts.md5
+else
+  if [ "$(md5sum $CONTAINERROOT/etc/hosts)" == "$(cat $CONTAINERBP/etc/hosts.md5)" ]; then
+    echo "md5sums match, will proceed."
+  else
+    echo "mdsums do not match, please check manually content of the file."
+#    exit 1
+  fi
+fi
+
+# disable DNS on container
+chattr -i $CONTAINERROOT/etc/resolv.conf
+cat > $CONTAINERROOT/etc/resolv.conf << EOF
+nameserver 127.0.0.1
+search .
+EOF
+# make it really r/o
+chattr +i $CONTAINERROOT/etc/resolv.conf
+
+# create /etc/hosts on container - our base for IPs and domains, we do not use a DNS!
+cp $CONTAINERROOT/etc/hosts $CONTAINERBP/etc/hosts
+chattr -i $CONTAINERROOT/etc/hosts
+chmod +w $CONTAINERROOT/etc/hosts
+cat > $CONTAINERROOT/etc/hosts << EOF
+127.0.0.1	localhost
+127.0.1.1	$CONTAINERNAME.$LOCALDOMAIN $CONTAINERNAME
+
+# automatically generated whitelisted domains:
+EOF
+
+# create IPs from whitelisted domains and add them to
+# /etc/hosts inside the container
+whitelist=$CONTAINERBP/whitelisteddomains.txt
+if [ -f $whitelist ]; then
+  echo "File $whitelist exists."
+else
+  echo "File $whitelist not found. Create and start again."
+  touch $whitelist
+#  exit 1
+fi
+
+# check whether file is empty
+if [ ! -s $whitelist ]; then
+  echo "File $whitelist is empty. Add content ie. (IP + domain.)"
+#  exit 1
+else
+  echo "File $whitelist contains the following domains."
+  domains=$(cat $whitelist)
+  echo "Processing whitelisted domains:"
+  printf '%s\n' "${domains[@]}"
+fi
+
+# flush iptables
+# https://sleeplessbeastie.eu/2018/06/21/how-to-create-iptables-firewall-using-custom-chains/
+# no need to flush everything(!) with 'iptables -F'
+#$IPTABLES -L
+# remove the previous firewall chains
+$IPTABLES -D INPUT -j $CONTAINERNAME-in
+$IPTABLES -D INPUT -j $CONTAINERNAME-fw
+$IPTABLES -F $CONTAINERNAME-in
+$IPTABLES -F $CONTAINERNAME-fw
+$IPTABLES -X $CONTAINERNAME-in
+$IPTABLES -X $CONTAINERNAME-fw
+
+# we create rules based on interface AND IP so it is not so easy to spoof both viewed from the host
+# this interface cannot be changed from inside the container
+# create entries for input if something went out so it can go back
+$IPTABLES -N $CONTAINERNAME-in
+$IPTABLES -A $CONTAINERNAME-in -i $CONTAINERIF -s $CONTAINERIP -p tcp  -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+$IPTABLES -A $CONTAINERNAME-in -i $CONTAINERIF -s $CONTAINERIP -p udp  -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+# add chain to INPUT chain
+$IPTABLES -I INPUT -j $CONTAINERNAME-in
+
+# create entries for forward and /etc/hosts entries for simple DNS resolution
+$IPTABLES -N $CONTAINERNAME-fw
+
+# https://stackoverflow.com/questions/1378274/in-a-bash-script-how-can-i-exit-the-entire-script-if-a-certain-condition-occurs
+# https://stackoverflow.com/questions/1521462/looping-through-the-content-of-a-file-in-bash/
+cat $whitelist | while read dnam || [[ -p $dnam ]] # read final line even if not terminated by newline
+do
+  echo $dnam
+  while IFS= read -r IP
+  do
+    echo $IP
+    if [ -n "$IP" ]
+    then
+      #https://stackoverflow.com/questions/13777387/check-for-ip-validity
+      if [[ $IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]
+      then
+        #tab delimiter cols
+        #https://unix.stackexchange.com/questions/47832/is-there-a-simple-command-for-outputting-tab-delimited-columns
+        echo "$IP $dnam" >> $CONTAINERROOT/etc/hosts
+        #https://stackoverflow.com/questions/6384817/iptables-setting-multiple-multiports-in-one-rule
+        #https://www.cyberciti.biz/faq/how-to-use-iptables-with-multiple-source-destination-ips-addresses/
+        # create iptables rules multiport 80,443
+        $IPTABLES -A $CONTAINERNAME-fw -i $CONTAINERIF -s $CONTAINERIP -d $IP -m multiport -p tcp --dports 80,443 -j ACCEPT
+      else
+        echo "$IP is not a regular IP v4, will drop it."
+      fi
+    else
+      echo "$dnam = $IP (=empty), will stop. Review whitelisted domains."
+      exit 1
+    fi
+  done <<< "$(/usr/bin/dig $dnam +short)"
+done
+# show
+echo "content of $CONTAINERROOT/etc/hosts"
+cat $CONTAINERROOT/etc/hosts
+# make it really r/o
+chattr +i $CONTAINERROOT/etc/hosts
+
+# block the rest
+# we block only the interface now in case the container manages to change the IP
+# it will be more difficult to change the device OUTSIDE of the container on the host...
+# so we allow only if interface AND IP match, otherwise we block the whole interface
+$IPTABLES -A $CONTAINERNAME-fw -i $CONTAINERIF -j DROP
+#$IPTABLES -A $CONTAINERNAME-fw -i $CONTAINERIF -s $CONTAINERIP -j DROP
+# add chain to FORWARD chain
+$IPTABLES -I FORWARD -j $CONTAINERNAME-fw
+
+# OUTPUT CHAIN????
+
+# review and create md5sums on the host for future checks
+cat $CONTAINERROOT/etc/hosts
+#$IPTABLES -L -v -n
+$IPTABLES -n --list $CONTAINERNAME-in --line-numbers
+$IPTABLES -n --list $CONTAINERNAME-fw --line-numbers
+md5sum $CONTAINERROOT/etc/hosts > $CONTAINERBP/etc/hosts.md5
+
+# bring back network for container
+echo "bring uo interface $CONTAINERIF."
+ip link set $CONTAINERIF up
+
+exit 0
+
+##### example
+# cat $CONTAINERROOT/etc/hosts
