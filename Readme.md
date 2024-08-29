@@ -380,12 +380,11 @@ exit
 
 We re-login again to have now a proper hostname at the bash prompt.
 If you do not want to remove ipv6 on the container, just skip the next part.
-It seems that systemd-networkd cannot easily remove ipv6 support.
+It seems that systemd-networkd cannot easily [remove ipv6 support](https://unix.stackexchange.com/questions/544749/how-to-fully-disable-ipv6-in-lxd-containers-with-systemd-networkd).
 
 ```bash
 # no ipv6
 # does not seem to work for systemd-networkd anymore
-# https://unix.stackexchange.com/questions/544749/how-to-fully-disable-ipv6-in-lxd-containers-with-systemd-networkd
 
 cat >> /etc/sysctl.conf << EOF
 # disable ipv6
@@ -1207,8 +1206,8 @@ The same is true for nvidia closed source repo drivers, but we have no other cho
 ### Notes on good habits
 
 - check for security updates, for *.debs use unattended security updates
-- and get rid of unnecessary stuff... ie debs you do not need (not so easy to sort that out)
-- do this when you have installed everything you need or reverse the steps later
+- and get rid of unnecessary stuff... ie. debs you do not need (not so easy to sort that out)
+- do this when you have installed everything, you can always reverse the steps later and re-install whatever-is-needed
 
 It's a good choice to enable automatic security updates not just on the host but also inside the container.
 
@@ -1299,7 +1298,7 @@ As long as AI/ML webUIs do not implement strict security measures (almost imposs
 
 - Link as read-only your $COMFYUIROOT/models folder of ComfyUI into the container via a BIND rule if you do not want all models within the container
 
-- Enable/ disable network of the container by the host
+Enable/ disable network of the container from the host
 
 ```bash
 # on host:
@@ -1323,9 +1322,9 @@ ip link | grep $IFACE
 
 - After installing a plugin, start it with disabled network and see whether it complains or does not work.
 - Check with the iptables script to update your whitelisted domains regularly.
-- BE AWARE that github is not necessarily a secure repository, but you need it for AI/ML stuff (!)
-- So in sum the security measures are only partially even if the manual effort above may look like nonsense/ overkill. A container without network cannot do that much, but that does not mean to disable common sense. Regular scans and reading on official github repos/ reddit groups/ etc. are good to receive information about malware as soon as possible.
-- IF someone wants to automate/script some of the parts here for daily security, just go ahead!
+- BE AWARE that github is not necessarily a secure repository, but you need it for AI/ML stuff (!). Malware can be everywhere even in checked repos/ webspaces/ etc.
+- So in sum the security steps taken are only partially even if the manual effort above may look like nonsense/ overkill. A container without network cannot do that much, but that does not mean to disable common sense. Regular scans and reading on official github repos/ reddit groups/ etc. are good to receive information about malware as soon as possible.
+- IF someone wants to automate/ script some of the parts here for daily security checks, just go ahead!
 
 
 ### Output of the whitelisted domains after installation
@@ -1389,7 +1388,7 @@ cat /var/lib/machines/aiml-gpu/etc/hosts
 ```
 
 
-## Summary + more notes
+## Summary + more notes and reflections
 
 There are some things to consider seriously - do some research on it if you are not familiar with the points before you start.
 
