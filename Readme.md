@@ -2,9 +2,9 @@
 
 ## Advance Organizer
 
-The goal is to restrict access of AI/ML engines to network, other computers and data, etc. without inhibiting their tasks (e.g. image generation).
+The goal is to restrict (inhibit) access of AI/ML engines to network, other computers and data, etc. without disturbing their tasks (e.g. image generation).
 
-The tutorial uses a systemd based chroot environment (jail) to prevent the container and running processes to access the LAN or internet except for whitelisted domains and to deny all access to the host to protect personal data, passwords, etc. The firewall iptables rules from the host work based on a combination of IP address and virtual ethernet device name of the container (viewed from the host's perspective). For AI/ML the GPU(s) can be used from within the container making use of a conda environment. Within the container the AI/ML engine user is separated from the user who calls a browser for webUI interaction. No personal data must be stored within the container. AI/ML models should be bound r/o into the container. The host prevents certain files from being changed by the container (e.g. no DNS allowed). The approach does not prevent from infection, but makes it much harder in case of infection to let personal data be stolen or any other harm done. In case of infection the container can be wiped and replaced by an infected-free version. This is enhanced by certain general suggestions to enhance security while working with rapid changing environments like AI/ML engines. This requires more manual work, python dry-runs, and common sense - not necessarily an automatic process.
+The tutorial uses a systemd based chroot environment (jail) to prevent the container and running processes to access the LAN or internet except for whitelisted domains and to deny all access to the host to protect personal data, passwords, etc. The firewall iptables rules from the host work based on a combination of IP address and virtual ethernet device name of the container (viewed from the host's perspective). Therefor the container's IP must be static and definite. For AI/ML the GPU(s) can be used from within the container making use of a conda environment. Within the container the AI/ML engine user is separated from the user who calls a browser for webUI interaction. No personal data must be stored within the container. AI/ML models should be bound r/o into the container. The host prevents certain files from being changed by the container (e.g. no DNS allowed). The approach does not prevent from infection, but makes it much harder in case of infection to let personal data be stolen or any other harm done. In case of infection the container can be wiped and replaced by an infected-free version. This is enhanced by certain general suggestions to enhance security while working with rapid changing environments like AI/ML engines. This requires more manual work, python dry-runs, and common sense - not necessarily an automatic process, and certainly not one that all users appreciate.
 
 ## Overview
 
@@ -1573,4 +1573,5 @@ IF someone has a better and more secure approach, just go ahead and share it. Th
 - add `bind` switch to mount r/o folders from the host into the container
 - check whether `chattr` can change file attributes from within the container if the host already set those permissions
 - add some cronjobs for on-access scans of the container, esp. for python installs (...some script...)
+- investigate whether the container really cannot read out keyboard strokes, etc. from the host
 
