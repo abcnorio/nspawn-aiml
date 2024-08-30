@@ -1,4 +1,4 @@
-# Basic security enhancement for AI/ML engines like Stable Diffusion using ComfyUI or other webUIs
+# Basic security considerations for AI/ML engines like Stable Diffusion using ComfyUI or other webUIs
 
 ## Advance Organizer
 
@@ -623,7 +623,7 @@ else
   exit 1
 fi
 
-# required if the screen is not connected to the nvidia GPU(s) and uses e.g. a iGPU
+# required if the screen is not connected to the NVIDIA GPU(s) and uses e.g. a iGPU
 mknod -m 755 /dev/nvidia-caps c $(cat /proc/devices | grep nvidia-caps | awk '(print $1)') 80
 mknod -m 755 /dev/nvidia-uvm-tools c $(cat /proc/devices | grep nvidia-uvm | awk '(print $1)') 80
 
@@ -657,7 +657,7 @@ ls -la /dev|grep nvidia
 ```
 
 Each time you boot the computer this script should be run, otherwise if device entries are missing the container cannot access the GPU properly.
-We switch back to the running container and prepare the nvidia drivers.
+We switch back to the running container and prepare the NVIDIA drivers.
 
 
 ```bash
@@ -672,7 +672,7 @@ machinectl login $VNAME
 apt-get update
 apt-get install curl gpg ca-certificates --no-install-recommends
 
-#https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
+# https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
 curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
   && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
   sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
@@ -702,7 +702,7 @@ deb http://security.debian.org/debian-security trixie-security main contrib non-
 EOF
 ```
 
-Re-check on the host, because the nvidia driver must be the same version on the host as well as inside the container.
+Re-check on the host, because the NVIDIA driver must be the same version on the host as well as inside the container.
 
 ```bash
 # outside container
@@ -714,7 +714,7 @@ Switch back to the container
 ```bash
 # inside container
 
-# nvidia driver + browser
+# NVIDIA driver + browser
 apt-get update && apt-get install nvidia-driver nvidia-cuda-toolkit nvidia-smi nvtop firefox-esr --no-install-recommends
 ```
 
@@ -738,7 +738,7 @@ Switch to the host to edit some nspawn specific touch related to GPU.
 ```bash
 # outside of container
 
-# enable/ allow nvidia stuff
+# enable/ allow NVIDIA stuff
 systemctl edit systemd-nspawn@aiml-gpu.service 
 ```
 
@@ -782,7 +782,7 @@ machinectl login $VNAME
 Now, login as user $USERAI and not as root, because the `nvidia-smi` does not work if called as `root`. So you should be a user.
 
 ```bash
-# check for nvidia, must give some meaningful output about accessible NVIDIA GPUs
+# check for NVIDIA, must give some meaningful output about accessible NVIDIA GPUs
 nvidia-smi
 nvtop
 ```
@@ -1199,7 +1199,7 @@ In general,
 
 One can install browsers via snap and flatpak, whether this is more secure is a good question. There are notes on [flatkill](https://flatkill.org) that doubt the overall security of flatpak (unclear whether confirmed by third parties!) and there were two cases of malware on snap. But to be fair this is years ago and was detected rather quickly. So this is no real reason against snap, rather it shows they seem to care about malware. However, the snap store itself is closed source and not FOSS. snap originated from canonical and flatpak originated from redhat. As usual it is a matter of trust and trustworthiness of repositories. To keep it simple we make use of Debian repos and there is no need to abbreviate from the official repos. Unless you take a browser directly from the developing company you have to trust a repo. So the choice is up to you.
 
-The same is true for nvidia closed source repo drivers, but we have no other choice at the moment to get the AI/ML stuff working under *nix with nvidia GPUs.
+The same is true for NVIDIA closed source repo drivers, but we have no other choice at the moment to get the AI/ML stuff working under *nix with NVIDIA GPUs.
 
 
 ### Notes on good habits
@@ -1240,7 +1240,7 @@ systemctl status unattended-upgrades
 
 ### More restrictions
 
-We reduce our `/etc/apt/sources.list` to nvidia stuff and security updates. Be aware that you may have to reverse that in case nvidia updates would require other system libraries to be updated. Then add the original `sources.list`, so we need to back it up.
+We reduce our `/etc/apt/sources.list` to NVIDIA stuff and security updates. Be aware that you may have to reverse that in case NVIDIA updates would require other system libraries to be updated. Then add the original `sources.list`, so we need to back it up.
 
 ```bash
 # outside of container
@@ -1254,7 +1254,7 @@ You can restore it with
 cp $ROOT/$VNAME-etc-apt_sources.list_full-BP $OFFICIALPATH/$VNAME/etc/apt/sources.list
 ```
 
-To reduce the `sources.list` to only nvidia and security updates.
+To reduce the `sources.list` to only NVIDIA and security updates.
 
 ```bash
 # look whether localmirror is still ok
