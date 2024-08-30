@@ -21,9 +21,9 @@
 
 ## Advance Organizer
 
-The goal is to restrict (inhibit) access of AI/ML engines to network, other computers and data, etc. without disturbing their tasks (e.g. image generation).
+The goal is to restrict (inhibit) access of AI/ML engines to network, other computers and data, etc. without disturbing their tasks (e.g. image generation). This is achieved by using a systemd-nspawn container along with iptables rules and a nested xserver.
 
-The tutorial uses a systemd based chroot environment (jail) to prevent the container and running processes to access the LAN or internet except for whitelisted domains and to deny all access to the host to protect personal data, passwords, etc. The firewall iptables rules from the host work based on a combination of IP address and virtual ethernet device name of the container (viewed from the host's perspective). Therefor the container's IP must be static and definite. For AI/ML the GPU(s) can be used from within the container making use of a conda environment. Within the container the AI/ML engine user is separated from the user who calls a browser for webUI interaction. No personal data must be stored within the container. AI/ML models should be bound r/o into the container. The host prevents certain files from being changed by the container (e.g. no DNS allowed). The approach does not prevent from infection, but makes it much harder in case of infection to let personal data be stolen or any other harm done. In case of infection the container can be wiped and replaced by an infected-free version. This is enhanced by certain general suggestions to enhance security while working with rapid changing environments like AI/ML engines. This requires more manual work, python dry-runs, and common sense - not necessarily an automatic process, and certainly not one that all users appreciate.
+The tutorial uses a systemd based chroot environment (jail) to prevent the container and running processes to access the LAN or internet except for whitelisted domains and to deny all access to the host to protect personal data, passwords, etc. The firewall iptables rules from the host work based on a combination of IP address and virtual ethernet device name of the container (viewed from the host's perspective). Therefor the container's IP must be static and definite. For AI/ML the GPU(s) can be used from within the container along with a conda environment. Within the container the AI/ML engine user is separated from the user who calls a browser for webUI interaction. No personal data must be stored within the container. AI/ML models should be bound r/o into the container. The host prevents certain files from being changed by the container (e.g. no DNS allowed). The approach does not prevent from infection, but makes it much harder in case of infection to let personal data be stolen or any other harm done. In case of infection the container can be wiped and replaced by an infected-free version. This is enhanced by certain general suggestions to enhance security while working with rapid changing environments like AI/ML engines. This requires more manual work, python dry-runs, and common sense - not necessarily an automatic process, and certainly not one that all users appreciate.
 
 ## Overview
 
@@ -68,8 +68,8 @@ In the following some terms are used
 First, look into the script and change names and variables according to your wishes.
 
 - If a path does not suit you, change it.
-- As network bridge we use `br0`, set this up with the network tools of your choice or follow the tutorial using systemd
-- The tutorial is based on Debian trixie, but it should work for other versions as well (but not tested!)
+- As network bridge we use `br0`, set this up with the network tools of your choice or follow the tutorial using `systemd-networkd`.
+- The tutorial is based on Debian trixie, but it should work for other versions as well (but not tested!).
 - As long as the bridge `br0` works, the tutorial should work.
 - If you need initially more packages, add additional packages to the `debootstrap` command.
 - We focus here on a minimal system and you may even try later to remove some packages not required anymore.
