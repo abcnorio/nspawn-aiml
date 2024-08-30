@@ -60,10 +60,10 @@ Some of the comments in the scripts may be helpful, otherwise just ignore them.
 
 ## TUTORIAL
 
-In the following terms are used
+In the following some terms are used
 
-- `outside container` = work as root on the host
-- `inside container` = work after login to container, start the login on the host with `machinectl login $VNAME`, see below
+- `outside container` = work as `root` or `desktop user` on the host
+- `inside container` = work after login to container, start the login on the host with `machinectl login $VNAME`, see below, and work as `root`, `user for AI/ML stuff` or `user just for browser`.
 
 First, look into the script and change names and variables according to your wishes.
 
