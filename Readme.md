@@ -812,7 +812,7 @@ We switch now to a user on the host, not as `root`, because we deal now with X f
 
 ```bash
 # outside container as desktop user (not root!)
-# never do just 'xhost +' - this would enable *everyone* to connect to you
+# never do just 'xhost +' - this would enable **everyone** to connect to you
 xhost +local:
 ```
 
@@ -1070,7 +1070,7 @@ Let's have a loot at the whitelisted domains used for the iptables script by def
 There is no reason to allow for more from within the container even models can be downloaded manually from civitai or huggingface and checked by malware/ virus scanner unless you really want ComfyUI-Manager to do that. Then you have to keep track of whitelisted domains. Better keep the whitelist simple and short. There is no need to go to the internet from within the container except for installing AI/ML engines or updating/ extending them.
 
 > [!WARNING]
-> We do not cover here the usage of malware scanners, rootkit detectors, and audits. That requires serious in-depth knowledge of systems, esp. because *detection does not mean hardening*. Here, diagnostics is not already applied intervention.
+> We do not cover here the usage of malware scanners, rootkit detectors, and audits. That requires serious in-depth knowledge of systems, esp. because **detection does not mean hardening**. Here, *diagnostics is not already applied intervention*.
 
 However, if some is interested in that topic, please visit the following security related pages for Linux. All pages lead to external resources (checked 2024-08-29).
 
@@ -1540,7 +1540,7 @@ To be a little bit more secure, one should work the following way:
 pip install -r requirements.txt --dry-run 2>&1 | tee ~/$PLUGINNAME.log
 ```
 
-Do all that from *within* the `pyenv`/ `conda` environment inside the container.
+Do all that from **within** the `pyenv`/ `conda` environment inside the container.
 
 As long as the ComfyUI-Manager does not integrate some `pip install [...] --dry-run` routine with a switch for those who want to use it or not, it lacks certain security features. After a `--dry-run` you can run a virus scanner or whatever on it bevor actually doing anything. Be aware where exactly stuff is downloaded into a `pyenv`/ `conda` environment folder, ComfyUI folder, etc. Whether the ComfyUI-Manager gets some function on this subject is not clear. Many users may find the procedure outlined above complicated, disturbing, inhibiting, or just stealing their time. So a switch to allow for dry-runs or not is recommended. Good would be the option to scan those folders with an external virus scanner engine like clamav or whatever one uses. Same true to enable the (half-)automatic use of rootkit detectors. But even using hashes etc. is not enough if a repo is compromised right from the beginning by the people who run it.
 
