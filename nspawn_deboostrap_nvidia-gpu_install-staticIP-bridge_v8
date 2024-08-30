@@ -571,10 +571,9 @@ export DISPLAY=:0.0
 firefox-esr
 
 # alternative with xephyr (=nested X server)
-# problem - at the moment firefox does not follow the resize of the window...
 # outside container
 
-apt-get install xserver-xephyr
+apt-get install xserver-xephyr xdotool
 
 # in /etc/systemd/nspawn/$VNAME.nspawn replace
 
@@ -601,8 +600,13 @@ BindReadOnly=/tmp/.X11-unix/X1
 # save file and exit editor
 
 # start nested X-server use user on the host
-#Xephyr -screen 1920x1080 -ac :1
-Xephyr :1 -resizeable
+# adjust the screen size to your local needs
+#Xephyr :1 -resizeable
+# run it with disabled shared memory (MIT-SHM) and disabled XTEST X extension
+# access is via unix socket /tmp/.X11-unix/X1
+# one can also disable tcp
+Xephyr -ac -extension MIT-SHM -extension XTEST -nolisten tcp -screen 1920x1080 -br -reset :1
+Xephyr -ac -extension MIT-SHM -extension XTEST -screen 1920x1080 -br -reset :1
 # a new window pops up, change to another terminal as root
 
 # if you cannot get the DISPLAY:1 in the container, reboot it
@@ -614,10 +618,7 @@ machinectl reboot $VNAME
 machinectl login $VNAME
 
 export DISPLAY=:1
-firefox-esr
-# again: problem at the moment - no resize of firefox possible
-# windows resize works without a problem with xhost method
-
+firefox && xdotool search --onlyvisible --class Firefox windowsize 100% 100%
 
 # now it's basically ready to be used for AI/ML engines like comfyui, fooocus, stable swarm, etc.
 # install AI/ML engines as $USERAI
