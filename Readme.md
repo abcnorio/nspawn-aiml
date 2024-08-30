@@ -10,16 +10,15 @@ The tutorial uses a systemd based chroot environment (jail) to prevent the conta
 
 The following tutorial can basically be applied to other AI/ML engines (not just ComfyUI) that require frequent downloads from not necessarily trusted webspaces on github or anywhere else. The tutorial uses the systemd-nspawn container approach as a base for the AI/ML engine. Via whitelisted domains and iptables firewall rules the container is restricted regarding network access.
 
-Nevertheless this is **not a full security protection tutorial**. Quite the opposite, the approach has more strength in case of infection by malware - esp. after a possible infection an attacker is bound to the restrictions of the container and cannot easily access the host, get personal data, reach arbitrary  IPs on the internet, and not the LAN. This is a compromise and no automatic solution that frees one from using one's own intelligence. Without some manual work and commonse sense nothing will protect you from possible infections. And even then that can happen. Getting malware infection does not mean one is a dumb user. This just can happen, so we try here to reduce the consequences.
+Nevertheless this is **not a full security protection tutorial**. Quite the opposite, the approach has more strength in case of infection by malware - esp. after a possible infection an attacker is bound to the restrictions of the container and cannot easily access the host, get personal data, reach arbitrary  IPs on the internet, and the LAN. This is a compromise and no automatic solution that frees one from using one's own intelligence. Without some manual work and commonse sense nothing will protect you from possible infections. And even then that can happen. Getting malware infection does not mean one is a dumb user. This just can happen, so we try here to reduce the consequences.
 
-If ever a container is compromised, wipe it, and restore it from an infected-free backup. That's why it is best to store downloaded models outside of the container and mount them read-only into the container. Confirm initially with public available hashes after download that your versions match from official sources.
+If ever a container is compromised, wipe it, and restore it from an infected-free backup. That's why it is best to store downloaded models outside of the container and mount them read-only into the container. Confirm initially with public available hashes after download that your versions match the hashes of official sources.
 
-The install is not fully automatic due to the local LAN set up that can vary a lot between computer and associated network. It requires to understand basically network setup under Linux. Otherwise one can mess it up and won't find a solution easily. That's the only real hurdle of the tutorial here. The container creation itself is straightforward. We work with Debian (.deb based) and systemd only. If one is convenient with a different network setup, apply that but keep in mind to configure the network properly so that virtual interface name and IP of the guest container match the values in the iptables script. The IP of the container must be static. Otherwise it won't work. What is essential for nspawn containers is a bridge on the host. We do not do any pci passthrough of the GPU. For that you can set up a kvm/ proxmox/ ... virtual machine if that is more convenient. This is not covered by the tutorial, but there are enough tutorials on the net. And it is not that difficult, but requires more computer resources than the nspawn-container approach. The nspawn container shares the same kernel with the host and it must use the same driver versions for the GPU.
+The install is not fully automatic due to the local LAN set up that can vary a lot between computer and associated network. It requires to understand basically network setup under Linux. Otherwise one can mess it up and won't find a solution easily. That's the only real hurdle of the tutorial here. The container creation itself is straightforward. We work with Debian (.deb based) and systemd only. If one is convenient with a different network setup, apply that but keep in mind to configure the network properly so that virtual interface name and IP of the guest container match the values in the iptables script. The IP of the container must be static. Otherwise it won't work. What is essential for nspawn containers is a bridge on the host. We do not do any pci passthrough of the GPU. For that you can set up a kvm/ proxmox/ ... virtual machine if that is more convenient. This is not covered by the tutorial, but there are enough tutorials on the net covering this subject. And it is not that difficult, but requires more computer resources than the nspawn container approach. The nspawn container shares the same kernel with the host and it must use the same driver version of the GPU (here: NVIDIA).
 
 ## Files
 
-The tutorial is stored in `nspawn_deboostrap_nvidia-gpu_install-staticIP-bridge_v8 `
-To create iptables rules we use the script `NSPAWN_iptables-etc_v3`. It should be run as root. Make it executable by `chmod +x NSPAWN_iptables-etc_v3`.
+The tutorial is stored in `nspawn_deboostrap_nvidia-gpu_install-staticIP-bridge_v8`. To create iptables rules we use the script `NSPAWN_iptables-etc_v3`. It should be run as `root`. Make it executable by `chmod +x NSPAWN_iptables-etc_v3`.
 At the beginning of each file you have to adjust values according to local needs like names, IPs, etc. Those are essential and must be chosen in accordance to your preferences and computer environment.
 
 The tutorial is mostly "copy & paste work" using different terminals:
@@ -820,13 +819,13 @@ export DISPLAY=:0.0
 firefox-esr
 ```
 
-There is an alternative to the `xhost` method which is more secure - a nested X server. We use `xephyr`. Unfortunately it seems it has problems to resize the browser allow its own windows is reqized properly.
+There is an alternative to the `xhost` method which is more [secure](https://github.com/mviereck/x11docker/wiki/Short-setups-to-provide-X-display-to-container) - a nested X server called `Xephyr`.
 
 First we install it on the host, switch to `root` on the host
 
 ```bash
 # outside container
-apt-get install xserver-xephyr
+apt-get install xserver-xephyr xdotool
 ```
 
 Some changes in the configs are required. In `/etc/systemd/nspawn/$VNAME.nspawn` replace the `DISPLAY` entry:
@@ -861,12 +860,16 @@ BindReadOnly=/tmp/.X11-unix/X1
 ```
 
 Save the file and exit the editor.
-On the host as desktop user start the nested xserver with the following values (screen size)
+On the host as desktop user start the nested xserver with the following values (adjust the screen size)
 
 ```bash
 # start nested X-server use user on the host
-#Xephyr -screen 1920x1080 -ac :1
-Xephyr :1 -resizeable
+#Xephyr :1 -resizeable
+# run it with disabled shared memory (MIT-SHM) and disabled XTEST X extension
+# access is via unix socket /tmp/.X11-unix/X1
+# one can also disable tcp
+#Xephyr -ac -extension MIT-SHM -extension XTEST -nolisten tcp -screen 1920x1080 -br -reset :1
+Xephyr -ac -extension MIT-SHM -extension XTEST -screen 1920x1080 -br -reset :1
 ```
 
 A new window pops up, change to another terminal as `root` and to be sure reboot the container so the `DISPLAY` variable can properly be accessed.
@@ -883,16 +886,12 @@ Again, log into the container as user $BROWSER.
 machinectl login $VNAME
 ```
 
-And set the `DISPLAY` variable and start the browser (here: firefox):
+And set the `DISPLAY` variable and start the browser (here: firefox) along with the `xdotool` call to make firefox covering the full window [1](https://superuser.com/questions/1457706/how-to-set-initial-firefox-size-or-resize-when-running-without-win-manager-he):
 
 ```bash
 export DISPLAY=:1
-firefox-esr
+firefox && xdotool search --onlyvisible --class Firefox windowsize 100% 100%
 ```
-
-> [!IMPORTANT]
-> Again - problem at the moment - no resize of firefox possible.
-> The windows resize works without a problem with the `xhost` method (which is less secure).
 
 
 ### Install conda environment and AI/ML engine
@@ -1020,7 +1019,7 @@ cd ../..
 python main.py
 ```
 
-If ComfyUI starts properly, log in separately on a different terminal as user $BROWSER into the container. Either use the `xhost` method or the nested xserver `xephyr`. We use the `xhost` method here. If it cannot connect, allow on the host as desktop user with `xhost +local:` and re-try.
+If ComfyUI starts properly, log in separately on a different terminal as user $BROWSER into the container. Either use the `xhost` method or the nested xserver `xephyr`. We use the `xhost` method here, but the nested xserver has a more [secure](https://github.com/mviereck/x11docker/wiki/Short-setups-to-provide-X-display-to-container) reputation, so you should use that. If it cannot connect with the `xhost` method, allow local access on the host as desktop user with `xhost +local:` and re-try.
 
 ```bash
 # xhost method
@@ -1412,9 +1411,7 @@ This will ensure that the container is restricted via firewall rules to whitelis
 
 ### Forward X from container to host to be able to use a browser
 
-One can use a nested x-server like Xephyr or `xhost +lan:` to allow access. Xephyr seems to have a problem with resizable windows of browsers ie. those cannot properly be resized although Xephyr itself can be resized. So we will use `xhost +local:`.
-If there is someone who knows how to configure Xephyr to allow for resizable browser windows in this setup, please leave a comment how to achieve this.
-What can be found on the net is that using Xephyr is more secure than xhost. So Xephyr is preferred but has problems with resizing the browser window.
+One can use a nested x-server like Xephyr or `xhost +lan:` to allow access. Xephyr should be preferred because of security. Otherwise, use `xhost +local:`.
 
 ### Prevent certain files from being changed
 
@@ -1567,7 +1564,6 @@ IF someone has a better and more secure approach, just go ahead and share it. Th
 
 ### TODOs
 
-- find a way to enable `xephyr` with enabled windows resize for the browser, as a consequence drop the `xhost` method
 - double cross-check whether `iptables` rules can really drop the `OUTPUT` chain (see script)
 - make installation more (half-)automatic
 - make network setup easier (difficult, too many possibilities in relation to local needs, permissions, etc.)
