@@ -70,7 +70,7 @@ First, look into the script and change names and variables according to your wis
 - If a path does not suit you, change it.
 - As network bridge we use `br0`, set this up with the network tools of your choice or follow the tutorial using systemd
 - The tutorial is based on Debian trixie, but it should work for other versions as well (but not tested!)
-- As long as the bridge 'br0' works, the tutorial should work.
+- As long as the bridge `br0` works, the tutorial should work.
 - If you need initially more packages, add additional packages to the `debootstrap` command.
 - We focus here on a minimal system and you may even try later to remove some packages not required anymore.
 
@@ -167,7 +167,7 @@ Out example covers a host with bridge `br0`, a static IP for the host, and later
 > [!CAUTION]
 > READ GUIDES FOR YOUR SPECIFIC OS how to create a bridge if there is none (!). DO NOT TRY to let the network be managed by more than one service (!) Choose ONLY one, and then apply this service consequently.
 
-If you do not want to create a bridge with systemd, look for alternatives (/etc/network/interfaces, NetworkManager/nmcli, bridge-utils/brctl, ...), and apply those tools.
+If you do not want to create a bridge with `systemd-networkd`, look for alternatives (`/etc/network/interfaces`, `NetworkManager/nmcli`, `bridge-utils/brctl`, ...), and apply those tools.
 
 ```bash
 # static IP for host
@@ -203,7 +203,7 @@ systemctl disable NetworkManager.service
 service networking stop
 systemctl disable networking.service
 # move the config, we don't need it
-mv/etc/network/interfaces /etc/network/interfaces_BP
+mv /etc/network/interfaces /etc/network/interfaces_BP
 ```
 
 Now we create a systemd-networkd bridge
