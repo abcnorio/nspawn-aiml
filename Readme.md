@@ -140,8 +140,7 @@ debootstrap  --arch $ARCH --variant=minbase --include=systemd-container,systemd,
 Out example covers a host with bridge `br0`, a static IP for the host, and later we apply a static IP to the container as well. Proceed only if you do not have already a bridge.
 
 > [!CAUTION]
-- READ GUIDES FOR YOUR SPECIFIC OS how to create a bridge if there is none (!)
-- DO NOT TRY to let the network be managed by more than one service (!) Choose ONLY one, and then apply this service consequently.
+> READ GUIDES FOR YOUR SPECIFIC OS how to create a bridge if there is none (!). DO NOT TRY to let the network be managed by more than one service (!) Choose ONLY one, and then apply this service consequently.
 
 If you do not want to create a bridge with systemd, look for alternatives (/etc/network/interfaces, NetworkManager/nmcli, bridge-utils/brctl, ...), and apply those tools.
 
@@ -1088,13 +1087,7 @@ And for the people who know what they do.. btw - not everything is FOSS and this
 For those again who are from the IT world 'apparmor' and 'SELinux' are good tools to create an additional layer of security. 'firejail' can be compiled with 'apparmor' support, and may be another wrapper around the browser within the container.
 
 > [!TIP]
-- Check the net for what is possible
-- Use several engines parallel to each other
-- Use cron-jobs to check on the container from the host each night
-- Let the cron-job send you a local mail to your admin account with a summary
-- Check after each install of plugins, models, etc. BEFORE starting your AI/ML engine
-- Use common sense, have a look at the python code, the requirements, etc., and check what is downloaded and from where
-- Keep a log of everything (e.g. python lib installs) with stderr as well as stdout so you can see the output on the terminal and it is saved in a file:
+> Check the net for what is possible ie. which technologies are available and can be applied by normal users. Use several engines parallel to each other. Use cron-jobs to check on the container from the host each night. Let the cron-job send you a local mail to your admin account with a summary. Check after each install of plugins, models, etc. BEFORE starting your AI/ML engine. Use common sense, have a look at the python code, the requirements, repo reputation (but not just by counting any stars or thumbs-up!), etc., and check what is downloaded and from where. Keep a log of everything (e.g. python lib installs) with stderr as well as stdout so you can see the output on the terminal and it is also saved in a file:
 
 ```bash
 [bash command] 2&>1 | tee logfile.txt
@@ -1104,10 +1097,7 @@ For those again who are from the IT world 'apparmor' and 'SELinux' are good tool
 > This tutorial is no guarantee to be malware free, but it makes it alittle bit harder to be infected, and with a container it is harder to infect your whole system, get data, etc. and do damage in general.
 
 > [!IMPORTANT]
-> Make a backup of the container before starting with anything, and store it on a different device independent from the host.
-> In case of infection, just wipe the container, boot from external live system, and scan your host as well thoroughly.
-> Check the host carefully, and only then restart with the backup of the container
-> Store the AI/ML models outside of the host as well as a backup
+> Make a backup of the container before starting with anything, and store it on a different device independent from the host. In case of infection, just wipe the container, boot from external live system, and scan your host as well thoroughly. Check the host carefully, and only then restart with the backup of the container. Store the AI/ML models outside of the host and perform another backup of it.
 
 
 ### Notes about browsers
