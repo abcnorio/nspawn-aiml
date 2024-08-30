@@ -1,5 +1,23 @@
 # Basic security considerations for AI/ML engines like Stable Diffusion using ComfyUI or other webUIs
 
+## TOC
+- [Advance Organizer](#advance-organizer)
+- [Overview](#overview)
+- [Files](#files)
+- [TUTORIAL](#tutorial)
+- [Network restrictions of the container](#network-restrictions-of-the-container)
+- [Notes about browsers](#notes-about-browsers)
+- [Alternative browser sources](#Alternative-browser-sources)
+- [Good habits](#Good-habits)
+- [More restrictions](#More-restrictions)
+- [Whitelisted domains](#Whitelisted-domains)
+- [Summary and reflections](#summary-and-reflections)
+- [End of the tutorial](#End-of-the-tutorial)
+- [Security considerations](#Security-considerations)
+- [Further tutorials on systemd-nspawn](#Further-tutorials-on-systemd-nspawn)
+- [DISCLAIMER](#disclaimer)
+- [TODOs](#todos)
+
 ## Advance Organizer
 
 The goal is to restrict (inhibit) access of AI/ML engines to network, other computers and data, etc. without disturbing their tasks (e.g. image generation).
@@ -1030,7 +1048,7 @@ Go to ComfyUI-Manager, install a SD model, and use the default template to creat
 If that works, the rest will work as well...
 
 
-### Network restrictions of the container
+## Network restrictions of the container
 
 Let's have a loot at the whitelisted domains used for the iptables script by default.
 
@@ -1100,7 +1118,7 @@ For those again who are from the IT world 'apparmor' and 'SELinux' are good tool
 > Make a backup of the container before starting with anything, and store it on a different device independent from the host. In case of infection, just wipe the container, boot from external live system, and scan your host as well thoroughly. Check the host carefully, and only then restart with the backup of the container. Store the AI/ML models outside of the host and perform another backup of it.
 
 
-### Notes about browsers
+## Notes about browsers
 
 The following commands should be called from inside container as `root`.
 
@@ -1180,7 +1198,7 @@ apt-get install firefox-esr
 firefox-esr
 ```
 
-### Some notes about snap and flatpak as alternative sources for browser installation
+## Alternative browser sources
 
 In general,
 
@@ -1192,7 +1210,7 @@ One can install browsers via snap and flatpak, whether this is more secure is a 
 The same is true for NVIDIA closed source repo drivers, but we have no other choice at the moment to get the AI/ML stuff working under *nix with NVIDIA GPUs.
 
 
-### Notes on good habits
+## Good habits
 
 - check for security updates, for *.debs use unattended security updates
 - and get rid of unnecessary stuff... ie. debs you do not need (not so easy to sort that out)
@@ -1228,7 +1246,7 @@ systemctl restart unattended-upgrades
 systemctl status unattended-upgrades
 ```
 
-### More restrictions
+## More restrictions
 
 We reduce our `/etc/apt/sources.list` to NVIDIA stuff and security updates. Be aware that you may have to reverse that in case NVIDIA updates would require other system libraries to be updated. Then add the original `sources.list`, so we need to back it up.
 
@@ -1316,7 +1334,9 @@ ip link | grep $IFACE
 - IF someone wants to automate/ script some of the parts here for daily security checks, just go ahead!
 
 
-### Output of the whitelisted domains after installation
+## Whitelisted domains
+
+The following domains are whitelisted after default installation.
 
 ```
 # whitelisted domains to install everything above
@@ -1377,7 +1397,7 @@ cat /var/lib/machines/aiml-gpu/etc/hosts
 ```
 
 
-## Summary + more notes and reflections
+## Summary and reflections
 
 There are some things to consider seriously - do some research on it if you are not familiar with the points before you start.
 
@@ -1495,7 +1515,7 @@ If you want to re-enable ipv6, just remove the newly create file with the entry 
 The iptables rules allow only for ipv4 addresses, so ipv6 does not make much sense here and is not absolutely essential.
 
 
-### End of the tutorial
+## End of the tutorial
 
 The tutorial goes up to the point to use NVIDIA GPU within the nspawn-container to be able use ComfyUI with the default template for image generation. For that one has to manually download a model, e.g. SDXL base model. If an image is generated, ecerything else will work, it means proper GPU passthrough into the container is functioning. You can always check that with
 
@@ -1504,7 +1524,7 @@ nvidia-smi
 nvtop
 ```
 
-### General security issue considerations
+## Security considerations
 
 One should symlink the AI/ML models to external space and download models manually. Then you can check for hashes, compare with official sources, etc. or run a virus scanner or whatever. Mount all models read-only into the container so they cannot be changed. If your container is ever infected, there is no need to re-download all that. But keep md5 hashes separately so you can compare in case of any doubt about the validity of a model or whatever you need.
 
@@ -1528,7 +1548,7 @@ As long as the ComfyUI-Manager does not integrate some `pip install [...] --dry-
 > In the end one is self-responsible at every step, and one should not outsource common sense to software. This does not mean one cannot be infected, and for such a case the container should provide a basic protection. That means within the container no personal data etc. should be ever stored. The container with proper `iptables` rules (check that manually whether it works!) should be restricted and it should not be possible to reach the LAN.
 
 
-### Further tutorials on systemd-nspawn
+## Further tutorials on systemd-nspawn
 
 The following tutorials are a good starting point to understand `nspawn` a little bit better, and it covers scenarios not touched by the tutorial. Most are focused on Debian/ Ubuntu/ Arch/ Fedora Linux based distributions. The following links all lead to external resources (checked 2024-08-29).
 
@@ -1544,7 +1564,7 @@ The following tutorials are a good starting point to understand `nspawn` a littl
 - [nvidia uvm](https://askubuntu.com/questions/590319/how-do-i-enable-automatically-nvidia-uvm)
 
 
-### DISCLAIMER
+## DISCLAIMER
 
 Although the tutorial was tested under varying conditions, we cannot rule out any possible errors. So we do not guarantee anything but to advice that users should use their common sense along with their intelligence and experience whether a result makes sense and is done properly or not. Thus, it is provided "as is". Use common sense to compare what is meant to do and you do and what is your computer setup (network, etc.).
 
@@ -1552,7 +1572,7 @@ NO WARRANTY of any kind is involved here. There is no guarantee that the softwar
 
 IF someone has a better and more secure approach, just go ahead and share it. The tutorial here is meant to suggest an approach that can be applied also by users not deeply involved with security. It allows for a certain protection of the host but there is no guarantee to be protected from malware without any active and valid scanners observing computer behavior and downloaded files for content. Best is always to keep personal data completely separate from such productive environment that undergo a rapid change like it is the case with AI/ML. But to be fair, not everyone can afford another computer to keep things separately. For those this tutorial may act as a help or inspiration.
 
-### TODOs
+## TODOs
 
 - double cross-check whether `iptables` rules can really drop the `OUTPUT` chain (see script)
 - make installation more (half-)automatic
