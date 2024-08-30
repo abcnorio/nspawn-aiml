@@ -134,7 +134,7 @@ systemctl stop NetworkManager.service
 systemctl disable NetworkManager.service
 service networking stop
 systemctl disable networking.service
-mv/etc/network/interfaces /etc/network/interfaces_BP
+mv /etc/network/interfaces /etc/network/interfaces_BP
 
 # for bridge
 cat > /etc/systemd/network/br0.netdev << EOF
