@@ -18,7 +18,7 @@
 - [Further tutorials on systemd-nspawn](#Further-tutorials-on-systemd-nspawn)
 - [DISCLAIMER](#disclaimer)
 - [TODOs](#todos)
-- [Licence](#licence)
+- [License](#license)
 
 ## Advance Organizer
 
@@ -1605,7 +1605,7 @@ IF someone has a better and more secure approach, just go ahead and share it. Th
 - investigate whether the container really cannot read out keyboard strokes, etc. from the host
 - speed up the network coming up (see delay mentioned above)
 
-## Licence
+## License
 
 - The systemd-nspawn service [GPL v3](https://www.gnu.org/licenses/gpl-3.0.html)
 - (extended) [NVIDIA script](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#runfile-verifications) to load uvm modules properly (C) NVIDIA Corporation
