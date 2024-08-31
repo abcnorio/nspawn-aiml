@@ -38,7 +38,7 @@ The install is not fully automatic due to the local LAN set up that can vary a l
 ## Security
 
 The systemd-nspawn approach shares the same kernel with the host which may be a security risk [1](https://unix.stackexchange.com/questions/145739/what-makes-systemd-nspawn-still-unsuitable-for-secure-container-setups) in case of kernel exploits. This is the same situation with [docker](https://opensource.com/business/14/7/docker-security-selinux). It can be run as a [non-privileged user](https://wiki.archlinux.org/title/Systemd-nspawn#Unprivileged_containers) but only one non-privileged user per container.
-However, systemd-nspawn is like a chroot environment and in contrast to chroot virtualizes the whole file system hierarchy and process tree.
+However, systemd-nspawn is like a chroot environment and in contrast to chroot virtualizes the whole file system hierarchy and process tree. The [man-page](https://www.freedesktop.org/software/systemd/man/latest/systemd-nspawn.html#Security%20Options) offers much more fine-tuning for security which is **not covered by this tutorial**.
 Whether and how systemd-nspawn can be infected by malware is difficult to assess, but it is certainly more secure than not using it and installing AI/ML plugins directly on the host. Of course one can switch to [LXC](https://wiki.archlinux.org/title/Linux_Containers) or kvm/ [libvirt](https://wiki.archlinux.org/title/Libvirt) full virtualization. It is not the goal of this tutorial to make a definite proposal about the most secure approach but to provide a manageable and practical solution for ordinary users without in-depth knowledge of *nix systems and security features. If someone has this knowledge, just go ahead and extend the points made here or question them - esp. if easier solutions are possible.
 
 ## Files
@@ -521,6 +521,21 @@ else
   ls -la $OFFICIALPATH/$VNAME.nspawn
 fi
 ```
+
+### Mounting folders from host
+
+The section of the [config-file](https://www.freedesktop.org/software/systemd/man/latest/systemd.nspawn.html) above `/etc/systemd/nspawn/...snpawn` below the section `[Files]` can contain more folders/ files so they are accessible from within the container, e.g. AI/ML models, the output of AI/ML engines, etc. Be aware that you should mount always as **read-only** unless you really want and have to write to it. The paths are defined as:
+
+``
+[Files]
+# bind read-only, e.g. AI/ML models
+BindReadOnly=/$PATH-ON-HOST:/$PATH-INSIDE-CONTAINER
+# bind read-write, e.g. output of AI/ML image generation
+# here path on host is the same as path inside the container
+Bind=/$PATH-ON-HOST
+``
+
+Extend this in accordance to your needs and replace dummy variables by real paths (host, container).
 
 ### DNS finish
 
@@ -1524,7 +1539,7 @@ The iptables rules allow only for ipv4 addresses, so ipv6 does not make much sen
 
 ## End of the tutorial
 
-The tutorial goes up to the point to use NVIDIA GPU within the nspawn-container to be able use ComfyUI with the default template for image generation. For that one has to manually download a model, e.g. SDXL base model. If an image is generated, ecerything else will work, it means proper GPU passthrough into the container is functioning. You can always check that with
+The tutorial goes up to the point to use NVIDIA GPU within the nspawn-container to be able use ComfyUI with the default template for image generation. For that one has to manually download a model, e.g. SDXL base model. If an image is generated, everything else will work, it means proper GPU passthrough into the container is functioning. You can always check that with
 
 ```bash
 nvidia-smi
@@ -1584,7 +1599,6 @@ IF someone has a better and more secure approach, just go ahead and share it. Th
 - double cross-check whether `iptables` rules can really drop the `OUTPUT` chain (see script)
 - make installation more (half-)automatic
 - make network setup easier (difficult, too many possibilities in relation to local needs, permissions, etc.)
-- add `bind` switch to mount r/o folders from the host into the container
 - check whether `chattr` can change file attributes from within the container if the host already set those permissions
 - add some cronjobs for on-access scans of the container, esp. for python installs (...some script...)
 - investigate whether the container really cannot read out keyboard strokes, etc. from the host
