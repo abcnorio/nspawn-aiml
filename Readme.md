@@ -18,6 +18,7 @@
 - [Further tutorials on systemd-nspawn](#Further-tutorials-on-systemd-nspawn)
 - [DISCLAIMER](#disclaimer)
 - [TODOs](#todos)
+- [Licence](#licence)
 
 ## Advance Organizer
 
@@ -1603,3 +1604,10 @@ IF someone has a better and more secure approach, just go ahead and share it. Th
 - add some cronjobs for on-access scans of the container, esp. for python installs (...some script...)
 - investigate whether the container really cannot read out keyboard strokes, etc. from the host
 - speed up the network coming up (see delay mentioned above)
+
+## Licence
+
+- The systemd-nspawn service GPL v3
+- NVIDIA script to load uvm modules properly (C) NVIDIA Corporation
+- all self-written bash code + text/ notes GPL v3
+
