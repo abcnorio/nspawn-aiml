@@ -1607,7 +1607,7 @@ IF someone has a better and more secure approach, just go ahead and share it. Th
 
 ## License
 
-- The systemd-nspawn service [GPL v3](https://www.gnu.org/licenses/gpl-3.0.html)
+- systemd-nspawn + associated configs [GPL v3](https://www.gnu.org/licenses/gpl-3.0.html)
 - (extended) [NVIDIA script](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#runfile-verifications) to load uvm modules properly (C) NVIDIA Corporation
 - bash code + text/ notes [GPL v3](https://www.gnu.org/licenses/gpl-3.0.html)
 
