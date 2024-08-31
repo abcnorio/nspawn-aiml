@@ -1,0 +1,8 @@
+systemd-nspawn + associated configs
+License: GPL (= 3)
+
+(extended) NVIDIA script to load uvm modules properly
+License: (C) NVIDIA Corporation
+
+all self-written bash code + text/ notes
+License: GPL (>= 3)
