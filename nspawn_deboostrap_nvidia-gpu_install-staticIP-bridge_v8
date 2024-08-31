@@ -342,6 +342,22 @@ else
   ls -la $OFFICIALPATH/$VNAME.nspawn
 fi
 
+# Mounting folders from host
+# see config file above `/etc/systemd/nspawn/...nspawn`
+# and https://www.freedesktop.org/software/systemd/man/latest/systemd.nspawn.html
+# one can mount more folders below the '[files]' section
+# Be aware that you should mount as read-only unless you really want and have to write to it.
+# e.g.
+
+[Files]
+# bind read-only, e.g. AI/ML models
+BindReadOnly=/$PATH-ON-HOST:/$PATH-INSIDE-CONTAINER
+# bind read-write, e.g. output of AI/ML image generation
+# here path on host is the same as path inside the container
+Bind=/$PATH-ON-HOST
+
+#Extend this in accordance to your needs.
+
 
 # inside container
 machinectl login $VNAME
