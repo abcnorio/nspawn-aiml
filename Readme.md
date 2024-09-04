@@ -527,14 +527,14 @@ fi
 
 The section of the [config-file](https://www.freedesktop.org/software/systemd/man/latest/systemd.nspawn.html) above `/etc/systemd/nspawn/...snpawn` below the section `[Files]` can contain more folders/ files so they are accessible from within the container, e.g. AI/ML models, the output of AI/ML engines, etc. Be aware that you should mount always as **read-only** unless you really want and have to write to it. The paths are defined as:
 
-``
+```bash
 [Files]
 # bind read-only, e.g. AI/ML models
 BindReadOnly=/$PATH-ON-HOST:/$PATH-INSIDE-CONTAINER
 # bind read-write, e.g. output of AI/ML image generation
 # here path on host is the same as path inside the container
 Bind=/$PATH-ON-HOST
-``
+```
 
 Extend this in accordance to your needs and replace dummy variables by real paths (host, container).
 
