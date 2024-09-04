@@ -1615,10 +1615,12 @@ IF someone has a better and more secure approach, just go ahead and share it. Th
 - double cross-check whether `iptables` rules can really drop the `OUTPUT` chain (see script)
 - make installation more (half-)automatic
 - make network setup easier (difficult, too many possibilities in relation to local needs, permissions, etc.)
-- check whether `chattr` can change file attributes from within the container if the host already set those permissions
+- check whether `chattr` can change file attributes from within the container if the host already set those permissions, if the host can change them just mount those files r/o into the container
 - add some cronjobs for on-access scans of the container, esp. for python installs (...some script...)
 - investigate whether the container really cannot read out keyboard strokes, etc. from the host
 - speed up the network coming up (see delay mentioned above)
+- add some network sniffing (nmap, netstat) and maintain logs of container's network behavior
+- add apparmor profile for nspawn or substitute by SELinux or use apparmor (nested namespaces work?) inside the container to restrict the conda environment and python
 
 ## License
 
