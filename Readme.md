@@ -1569,10 +1569,10 @@ One should symlink the AI/ML models to external space and download models manual
 To be a little bit more secure, one should work the following way:
 
 1. Download only established and well-known plugins. Be cautious in case of new plugins, have a direct manual look at the repo from which you intend to install, look for strange things, look into the source code, posts, etc. Read at the usual places like github discussions, reddit, discord, etc. whether any plugins have not a good reputation.
-2. Download ComfyUI plugins manually, not via the ComfyUI-Manager.
-3. Check the requirements.txt of the new plugin
-4. Do a `pip install [...] --dry-run` from within the plugin directory which downloads the stuff but does not install anything. Now scan those new files with a virus scanner, scan the repo python code visually for any strange or binary stuff, etc., and only if that looks ok, install without `--dry-run` switch, and restart comfyui.
-5. Maintain logfiles for each plugins download like
+2. Download ComfyUI plugins manually, not via the ComfyUI-Manager unless it supports a `dry-run`.
+3. Check the `requirements.txt` of the new plugin.
+4. Do a `pip install [...] --dry-run` from within the plugin directory which downloads the stuff but does not install anything. Now scan those new files with a virus scanner, scan the repo python code visually for any strange or binary stuff, etc., and only if that looks ok, install without `--dry-run` switch, and restart ComfyUI.
+5. Maintain logfiles for each plugins' download process like
 
 ```bash
 pip install -r requirements.txt --dry-run 2>&1 | tee ~/$PLUGINNAME.log
@@ -1580,7 +1580,7 @@ pip install -r requirements.txt --dry-run 2>&1 | tee ~/$PLUGINNAME.log
 
 Do all that from **within** the `pyenv`/ `conda` environment inside the container.
 
-As long as the ComfyUI-Manager does not integrate some `pip install [...] --dry-run` routine with a switch for those who want to use it or not, it lacks certain security features. After a `--dry-run` you can run a virus scanner or whatever on it bevor actually doing anything. Be aware where exactly stuff is downloaded into a `pyenv`/ `conda` environment folder, ComfyUI folder, etc. Whether the ComfyUI-Manager gets some function on this subject is not clear. Many users may find the procedure outlined above complicated, disturbing, inhibiting, or just stealing their time. So a switch to allow for dry-runs or not is recommended. Good would be the option to scan those folders with an external virus scanner engine like clamav or whatever one uses. Same true to enable the (half-)automatic use of rootkit detectors. But even using hashes etc. is not enough if a repo is compromised right from the beginning by the people who run it.
+As long as the ComfyUI-Manager does not integrate some `pip install [...] --dry-run` routine with a switch for those who want to use it or not, it lacks certain easy-to-implement security features. After a `--dry-run` you can run a virus scanner or whatever on it bevor actually doing anything. Be aware where exactly stuff is downloaded into a `pyenv`/ `conda` environment folder, ComfyUI folder, etc. Whether the ComfyUI-Manager gets some function on this subject is not clear. Many users may find the procedure outlined above complicated, disturbing, inhibiting, or just stealing their time. So a switch to allow for dry-runs or not is recommended. Good would be the option to scan those folders with an external virus scanner engine like ClamAV or whatever one uses. Same true to enable the (half-)automatic use of rootkit detectors. But even using hashes etc. is not enough if a repo is compromised right from the beginning by the people who run it like it happened before.
 
 > [!WARNING]
 > In the end one is self-responsible at every step, and one should not outsource common sense to software. This does not mean one cannot be infected, and for such a case the container should provide a basic protection. That means within the container no personal data etc. should be ever stored. The container with proper `iptables` rules (check that manually whether it works!) should be restricted and it should not be possible to reach the LAN.
