@@ -593,10 +593,39 @@ machinectl stop $VNAME
 
 ### Some restrictions
 
-Now we own the container by root on host and restrict the container.
+Now we own the container by root on host and restrict the container. The `private-users` options changes towards high `uids/guids` of all users in the containers including container's `root` user.
 
 ```bash
-systemd-nspawn -D $OFFICIALPATH/$VNAME --private-users=0 --private-users-chown --machine $VNAME
+#--private-users-ownership=chown
+#https://www.spinics.net/lists/systemd-devel/msg07597.html
+#--drop-capability=
+#sec https://systemd.io/CONTAINER_INTERFACE/
+#
+#https://www.digitalocean.com/community/tutorials/how-to-sandbox-processes-with-systemd-on-ubuntu-20-04
+# systemctl edit XXX-nspawn.service
+#ProtectHome=true
+#ProtectSyste=true/full/strict
+#LogsDirectory=XXX-nspawn
+#SystemCallFilter=@system-service
+#NoNewPrivileges=true
+#ProtectKernelTunables=true
+#ProtectKernelModules=true
+#ProtectKernelLogs=true
+#ProtectControlGroups=true
+#MemoryDenyWriteExecute=true
+#RestrictSUIDSGID=true
+#KeyringMode=private
+#ProtectClock=true
+#RestrictRealtime=true
+#PrivateDevices=true
+#PrivateTmp=true
+#ProtectHostname=true
+#https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html
+#https://man7.org/linux/man-pages/man7/capabilities.7.html
+#
+# pick = enable user namespacing
+# chown = change ownership of files of mapped uids/gids
+systemd-nspawn -D $OFFICIALPATH/$VNAME --private-users=pick --private-users-chown --machine $VNAME
 exit
 ```
 
