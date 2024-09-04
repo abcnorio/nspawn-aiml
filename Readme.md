@@ -1610,6 +1610,10 @@ NO WARRANTY of any kind is involved here. There is no guarantee that the softwar
 
 IF someone has a better and more secure approach, just go ahead and share it. The tutorial here is meant to suggest an approach that can be applied also by users not deeply involved with security. It allows for a certain protection of the host but there is no guarantee to be protected from malware without any active and valid scanners observing computer behavior and downloaded files for content. Best is always to keep personal data completely separate from such productive environment that undergo a rapid change like it is the case with AI/ML. But to be fair, not everyone can afford another computer to keep things separately. For those this tutorial may act as a help or inspiration.
 
+## Errors
+
+The suggestions here do not claim to be definite and error-free but meet personal needs.
+
 ## TODOs
 
 - double cross-check whether `iptables` rules can really drop the `OUTPUT` chain (see script)
