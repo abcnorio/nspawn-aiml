@@ -989,9 +989,9 @@ conda create --name comfyui-exp python=3.11
 conda activate comfyui-exp
 ```
 
-Before installing AI/ML engines, we do some more SECURITY. We switch to the host as `root` and activate the iptables script. Check the values within the script before running it. But it asks you anyway whether values are ok.
+Before installing AI/ML engines, we do some more SECURITY. We switch to the host as `root` and activate the `iptables` script. Check the values within the script before running it. But it asks you anyway whether values are ok.
 
-The following variables have to be set - new are just the backup folder of the container and its base. Change those values in the `NSPAWN_iptables-etc_v3` script to what suits the local needs:
+The following variables have to be set - new are just the backup folder of processed container files, and its base. Change those values in the `NSPAWN_iptables-etc_v3` script to what suits the local needs:
 
 ```bash
 CONTAINERNAME="aiml-gpu"
@@ -1004,7 +1004,7 @@ CONTAINERBP=$BASE/$CONTAINERNAME'_BP'
 IPTABLES=/usr/sbin/iptables
 ```
 
-Basically, the iptables script first disables the network of the container and the DNS entry in `$CONTAINERROOT/etc/resolv.conf` and restricts the latter to `127.0.0.1` (localhost). Then it protects the file r/o with `chattr -i [...]`. The whitelisted domains are all resolved and written to `/etc/hosts` inside the container. The file is later made r/o as well and cannot be changed by the container. The next step is to use `iptables` to create chains for `INPUT` and `FORWARD` to allow for stateful firewall and drop everything not being part of the whitelisted domain list. The domains are converted to `ipv4` by using `dig`. `ipv6` is not supported. Firewall rules are printed on the terminal and it finishes by enabling the network for the container.
+Basically, the iptables script first disables the network of the container and sets the DNS entry in `$CONTAINERROOT/etc/resolv.conf` to `127.0.0.1` (localhost). Then it protects the file r/o with `chattr -i [...]`. The whitelisted domains are all resolved and written to `/etc/hosts` inside the container. The file is later made r/o as well and cannot be changed by the container. The next step is to use `iptables` to create chains for `INPUT` and `FORWARD` to allow for stateful firewall and drop everything not being part of the whitelisted domain list. The domains are converted to `ipv4` by using `dig`. `ipv6` is not supported. The created firewall rules are printed on the terminal and it finishes by enabling the network of the container.
 
 ```bash
 # outside container
