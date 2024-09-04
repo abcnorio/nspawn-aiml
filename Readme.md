@@ -602,6 +602,7 @@ Now we own the container by root on host and restrict the container. The `privat
 #sec https://systemd.io/CONTAINER_INTERFACE/
 #
 #https://www.digitalocean.com/community/tutorials/how-to-sandbox-processes-with-systemd-on-ubuntu-20-04
+#https://manpages.debian.org/bookworm/manpages-de/systemd.exec.5.de.html#SANDBOXING
 # systemctl edit XXX-nspawn.service
 #ProtectHome=true
 #ProtectSyste=true/full/strict
