@@ -39,8 +39,10 @@ The install is not fully automatic due to the local LAN set up that can vary a l
 ## Security
 
 The systemd-nspawn approach shares the same kernel with the host which may be a security risk [1](https://unix.stackexchange.com/questions/145739/what-makes-systemd-nspawn-still-unsuitable-for-secure-container-setups) in case of kernel exploits. This is the same situation with [docker](https://opensource.com/business/14/7/docker-security-selinux). It can be run as a [non-privileged user](https://wiki.archlinux.org/title/Systemd-nspawn#Unprivileged_containers) but only one non-privileged user per container.
-However, systemd-nspawn is like a chroot environment and in contrast to chroot virtualizes the whole file system hierarchy and process tree. The [man-page](https://www.freedesktop.org/software/systemd/man/latest/systemd-nspawn.html#Security%20Options) offers much more fine-tuning for security which is **not covered by this tutorial**.
-Whether and how systemd-nspawn can be infected by malware is difficult to assess, but it is certainly more secure than not using it and installing AI/ML plugins directly on the host. Of course one can switch to [LXC](https://wiki.archlinux.org/title/Linux_Containers) or kvm/ [libvirt](https://wiki.archlinux.org/title/Libvirt) full virtualization. It is not the goal of this tutorial to make a definite proposal about the most secure approach but to provide a manageable and practical solution for ordinary users without in-depth knowledge of *nix systems and security features. If someone has this knowledge, just go ahead and extend the points made here or question them - esp. if easier solutions are possible.
+However, systemd-nspawn is like a `chroot` environment and in contrast to `chroot` virtualizes the whole file system hierarchy and process tree. The [man-page](https://www.freedesktop.org/software/systemd/man/latest/systemd-nspawn.html#Security%20Options) offers much more fine-tuning for security which is **not covered by this tutorial**. The `systemd service` allows for more [sandboxing options](https://www.redhat.com/sysadmin/mastering-systemd).
+Whether and how `systemd-nspawn` can be infected by malware is difficult to assess, but it is certainly more secure than not using it and installing AI/ML plugins directly on the host - without any kind of jail/ sandbox/ whatever. Of course one can switch to [`LXC`](https://wiki.archlinux.org/title/Linux_Containers) or `kvm`/ [`libvirt`](https://wiki.archlinux.org/title/Libvirt) full virtualization. It is not the goal of this tutorial to make a definite proposal about the most secure approach but to provide a manageable and practical solution for ordinary users without in-depth knowledge of `*nix` systems and security features. If someone has this knowledge, just go ahead and extend the points made here or question them - esp. if easier solutions are possible.
+Be aware that dropping capabilities to `systemd service` can decrease the security and not enhance it. One should also combine approaches like `systemd-nspawn` with [`firejail`](https://firejail.wordpress.com/) or the more complicated [bubblewrap](https://github.com/containers/bubblewrap), [apparmor](https://www.apparmor.net/) or [SELinux](https://www.redhat.com/de/topics/linux/what-is-selinux).
+Be also aware that allowing network access or access to /dev (required for GPUs) is a security risk, but one that cannot easily be avoided. For AI/ML engines one can shutdown the network while working and allow only for upgrades and installations (high security risk!), but the access to /dev is essential to be able to use the GPU.
 
 ## Files
 
@@ -596,34 +598,6 @@ machinectl stop $VNAME
 Now we own the container by root on host and restrict the container. The `private-users` options changes towards high `uids/guids` of all users in the containers including container's `root` user.
 
 ```bash
-#--private-users-ownership=chown
-#https://www.spinics.net/lists/systemd-devel/msg07597.html
-#--drop-capability=
-#sec https://systemd.io/CONTAINER_INTERFACE/
-#
-#https://www.digitalocean.com/community/tutorials/how-to-sandbox-processes-with-systemd-on-ubuntu-20-04
-#https://manpages.debian.org/bookworm/manpages-de/systemd.exec.5.de.html#SANDBOXING
-# systemctl edit XXX-nspawn.service
-#ProtectHome=true
-#ProtectSyste=true/full/strict
-#LogsDirectory=XXX-nspawn
-#SystemCallFilter=@system-service
-#NoNewPrivileges=true
-#ProtectKernelTunables=true
-#ProtectKernelModules=true
-#ProtectKernelLogs=true
-#ProtectControlGroups=true
-#MemoryDenyWriteExecute=true
-#RestrictSUIDSGID=true
-#KeyringMode=private
-#ProtectClock=true
-#RestrictRealtime=true
-#PrivateDevices=true
-#PrivateTmp=true
-#ProtectHostname=true
-#https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html
-#https://man7.org/linux/man-pages/man7/capabilities.7.html
-#
 # pick = enable user namespacing
 # chown = change ownership of files of mapped uids/gids
 systemd-nspawn -D $OFFICIALPATH/$VNAME --private-users=pick --private-users-chown --machine $VNAME
@@ -1114,6 +1088,52 @@ firefox-esr
 
 Go to ComfyUI-Manager, install a SD model, and use the default template to create an image.
 If that works, the rest will work as well...
+
+
+## Systemd sandboxing
+
+#--private-users-ownership=chown
+#https://www.spinics.net/lists/systemd-devel/msg07597.html
+#--drop-capability=
+#sec https://systemd.io/CONTAINER_INTERFACE/
+
+# systemctl edit $PROCESSNAME.service
+# https://www.digitalocean.com/community/tutorials/how-to-sandbox-processes-with-systemd-on-ubuntu-20-04
+# https://manpages.debian.org/bookworm/manpages-de/systemd.exec.5.de.html#SANDBOXING
+# https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html
+# https://man7.org/linux/man-pages/man7/capabilities.7.html
+# https://www.redhat.com/sysadmin/mastering-systemd
+#
+#AssertSecurity=
+#CapabilityBoundingSet=
+DynamicUser=true
+#InaccessibleDirectories=
+KeyringMode=private
+LogsDirectory=$VNAME-nspawn
+MemoryDenyWriteExecute=true
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateMounts=true
+PrivateNetwork=true
+PrivateTmp=true
+ProtectClock=true
+ProtectControlGroups=true
+ProtectDevices=true
+ProtectHome=true #true/read-only/tmpfs
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict #true/full/strict
+#ReadOnlyDirectories= 
+#ReadWriteDirectories=
+RestrictNamespaces=cgroup
+RestrictRealtime=true
+RestrictSUIDSGID=true
+#SELinuxContext=
+SystemCallFilter=@system-service
+
+# systemctl restart $PROCESSNAME.service
 
 
 ## Network restrictions of the container
