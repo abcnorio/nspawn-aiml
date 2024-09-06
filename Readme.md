@@ -6,6 +6,7 @@
 - [Security](#security)
 - [Files](#files)
 - [TUTORIAL](#tutorial)
+- [Systemd sandboxing](#systemd-sandboxing)
 - [Network restrictions of the container](#network-restrictions-of-the-container)
 - [Notes about browsers](#notes-about-browsers)
 - [Alternative browser sources](#Alternative-browser-sources)
