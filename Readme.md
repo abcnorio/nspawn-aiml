@@ -1092,6 +1092,7 @@ If that works, the rest will work as well...
 
 ## Systemd sandboxing
 
+```
 #--private-users-ownership=chown
 #https://www.spinics.net/lists/systemd-devel/msg07597.html
 #--drop-capability=
@@ -1134,7 +1135,7 @@ RestrictSUIDSGID=true
 SystemCallFilter=@system-service
 
 # systemctl restart $PROCESSNAME.service
-
+```
 
 ## Network restrictions of the container
 
