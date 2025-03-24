@@ -1,4 +1,4 @@
-# Basic security considerations for AI/ML engines like Stable Diffusion using ComfyUI or other webUIs
+# Basic security considerations for AI/ML engines (SD, ComfyUI, ...) using systemd-nspawn
 
 ## TOC
 - [Advance Organizer](#advance-organizer)
