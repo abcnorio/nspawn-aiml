@@ -472,7 +472,7 @@ ping 8.8.8.8
 Network should work, but not the name resolution. We check /etc/resolv.conf which has per default the values
 
 ```bash
-root@avconv:~# cat /etc/resolv.conf 
+root@xxxv:~# cat /etc/resolv.conf 
 # This is /run/systemd/resolve/stub-resolv.conf managed by man:systemd-resolved(8).
 # Do not edit.
 #
