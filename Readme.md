@@ -640,9 +640,19 @@ fi
 The section of the [config-file](https://www.freedesktop.org/software/systemd/man/latest/systemd.nspawn.html) above `/etc/systemd/nspawn/...snpawn` below the section `[Files]` can contain more folders/ files so they are accessible from within the container, e.g. AI/ML models, the output of AI/ML engines, etc. Be aware that you should mount always as **read-only** unless you really want and have to write to it. The paths are defined according to the manpage:
 
 ```
+[...]
 Bind=, BindReadOnly=
 
-    Adds a bind mount from the host into the container. Takes a single path, a pair of two paths separated by a colon, or a triplet of two paths plus an option string separated by colons. This option may be used multiple times to configure multiple bind mounts. This option is equivalent to the command line switches --bind= and --bind-ro=, see systemd-nspawn(1) for details about the specific options supported. This setting is privileged (see above).
+    Adds a bind mount from the host into the container.
+    Takes a single path, a pair of two paths separated by
+    a colon, or a triplet of two paths plus an option
+    string separated by colons. This option may be used
+    multiple times to configure multiple bind mounts.
+    This option is equivalent to the command line switches
+    --bind= and --bind-ro=, see systemd-nspawn(1) for details
+    about the specific options supported. This setting is
+    privileged (see above).
+[...]
 ```
 
 So we work accordingly.
@@ -854,7 +864,7 @@ Let's go back to the container
 machinectl login $VNAME
 ```
 
-Now, login as user $USERAI and not as root, because the `nvidia-smi` does not work if called as `root`. So you should be a user.
+Now, login as user `$USERAI` and not as `root`, because the `nvidia-smi` does not work if called as `root`. So you should work as a user.
 
 ```bash
 # check for NVIDIA, must give some meaningful output about accessible NVIDIA GPUs
@@ -872,6 +882,8 @@ We switch now to the desktop user on the host on a new terminal, not as `root`, 
 # outside container as desktop user (not root!)
 # never do just 'xhost +' - this would enable **everyone** to connect to you
 xhost +local:
+# reverse
+# xhost -local
 ```
 
 
@@ -1119,7 +1131,7 @@ For the install use the default values. It is ok to change the behavior that min
 ~/Miniconda3-latest-Linux-x86_64.sh
 ```
 
-Log out and log in again as user $USERAI.
+Log out and log in again as user `$USERAI`.
 
 ```bash
 # log out and log in as $USERAI
@@ -1306,6 +1318,8 @@ $CONTAINERBP/NSPAWN_iptables-etc_v3
 # - try again
 ```
 
+## Install ComfyUI
+
 Go back to the running container
 
 ```bash
@@ -1360,7 +1374,7 @@ cd ../..
 python main.py
 ```
 
-If ComfyUI starts properly, log in separately on a different terminal as user $BROWSER into the container. Either use the `xhost` method or the nested xserver `xephyr`. We use the `xhost` method here, but the nested xserver has a more [secure](https://github.com/mviereck/x11docker/wiki/Short-setups-to-provide-X-display-to-container) reputation, so you should use that. If it cannot connect with the `xhost` method, allow local access on the host as desktop user with `xhost +local:` and re-try. Some things may not work always properly like mouse behaviour, etc. which cannot be covered by this tutorial.
+If ComfyUI starts properly, log in separately on a different terminal as user `$BROWSER` into the container. Either use the `xhost` method or the nested xserver `xephyr`. We use the `xhost` method here, but the nested xserver has a more [secure](https://github.com/mviereck/x11docker/wiki/Short-setups-to-provide-X-display-to-container) reputation, so you should use that. If it cannot connect with the `xhost` method, allow local access on the host as desktop user with `xhost +local:` and re-try. Some things may not work always properly like mouse behaviour, etc. which cannot be covered by this tutorial.
 
 ```bash
 # xhost method
@@ -1525,7 +1539,7 @@ apt-get install --no-install-recommends [packages]
 
 Here are some browser examples under Linux:
 
-- netsurf
+- [netsurf](https://www.netsurf-browser.org/downloads/gtk/)
 
 ```bash
 apt-get install netsurf-gtk
@@ -1570,16 +1584,17 @@ dpkg -i vivaldi-stable_6.8.3381.48-1_amd64.deb
 vivaldi
 ```
 
-- firefox
+- [firefox](https://www.mozilla.org/en/firefox/new/)
+
 ```bash
 apt-get install firefox-esr
 # as $USER
 firefox-esr
 ```
 
-- ungoogled chromium
+- [ungoogled chromium](https://github.com/ungoogled-software/ungoogled-chromium)
 
-And then there is the ungoogled version of [chromium](https://github.com/ungoogled-software/ungoogled-chromium). It can be installed as a [deb package](https://github.com/ungoogled-software/ungoogled-chromium-debian) or via flatpak. Flatpak works not with the restrictions (high UID) previously introduced. It would require access to `mount proc`, `ldconfig`, etc.
+And then there is the [ungoogled](https://github.com/ungoogled-software/ungoogled-chromium) version of [chromium](https://www.chromium.org). It can be installed as a [deb package](https://github.com/ungoogled-software/ungoogled-chromium-debian) or via [flatpak](https://flatpak.org). Flatpak works not with the restrictions (high UID) previously introduced. It would require access to `mount proc`, `ldconfig`, etc. If that is not set, you can install it via:
 
 ```bash
 apt-get install flatpak
@@ -1588,11 +1603,11 @@ flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.f
 flatpak install flathub io.github.ungoogled_software.ungoogled_chromium
 ```
 
-Switch to the browser user and run ungoogled chromium with
+Switch to the `$BROWSER` user and run ungoogled chromium with
 
 ```bash
 # first create alias for the long call
-echo "alias ungooglechrom='flatpak run io.github.ungoogled_software.ungoogled_chromium'" > ~/.bashrc
+echo "alias ungooglechrom='flatpak run io.github.ungoogled_software.ungoogled_chromium'" >> ~/.bashrc
 ```
 
 log out, log in
@@ -1601,10 +1616,15 @@ log out, log in
 ungooglechrom
 ```
 
-Better is to use the [portable linux image](https://ungoogled-software.github.io/ungoogled-chromium-binaries/releases/linux_portable/64bit) which requires just a few more libraries to install.
+Better is to use the [portable linux image](https://ungoogled-software.github.io/ungoogled-chromium-binaries/releases/linux_portable/64bit) which requires just a few more libraries to install. Switch to `root` in the container.
 
 ```bash
 apt-get install wget libnss3
+```
+
+and switch then to the `$BROWSER` user.
+
+```bash
 # https://ungoogled-software.github.io/ungoogled-chromium-binaries/releases/linux_portable/64bit/134.0.6998.165-1
 wget https://github.com/ungoogled-software/ungoogled-chromium-portablelinux/releases/download/134.0.6998.165-1/ungoogled-chromium_134.0.6998.165-1_linux.tar.xz
 tar xf ungoogled-chromium_134.0.6998.165-1_linux.tar.xz
@@ -1613,10 +1633,16 @@ export DISPLAY=:1
 ./chrome-wrapper
 ```
 
-All in all a portable ungoogled chromium version seems to be the best solution.
+and remove as `root` the `wget` package with
+
+```bash
+apt purge wget
+```
+
+All in all a portable ungoogled chromium version seems to be the best solution so far.
 
 
-## Alternative browser sources
+### More considerations about security
 
 In general,
 
@@ -1642,7 +1668,7 @@ apt-get update
 apt-get install unattended-upgrades --no-install-recommends
 ```
 
-Now use your editor of choice. Install an editor you like, ... put in the name
+Now use your editor of choice. Install an editor you like as `root`, put in the name, and use it.
 
 ```bash
 EDITORNAME="joe"
@@ -1665,7 +1691,7 @@ systemctl restart unattended-upgrades
 systemctl status unattended-upgrades
 ```
 
-## More restrictions
+## Further possible restrictions
 
 We reduce our `/etc/apt/sources.list` to NVIDIA stuff and security updates. Be aware that you may have to reverse that in case NVIDIA updates would require other system libraries to be updated. Then add the original `sources.list`, so we need to back it up. If you really do not want files to be altered you can `chattr +i $FILE` them from the host. However, malware probably has its own IP based servers, so the restrictions on the level of allowed domains may be more effective.
 
@@ -1712,7 +1738,7 @@ cp $OFFICIALPATH/$VNAME/etc/apt/sources.list $ROOT/$VNAME_etc-apt_sources.list_r
 cp $ROOT/$VNAME_etc-apt_sources.list_red-BP $OFFICIALPATH/$VNAME/etc/apt/sources.list
 ```
 
-We use 'chattr' to make it r/o
+We use `chattr` as `root` on the host to make it really read-only.
 
 ```bash
 chattr +i $OFFICIALPATH/$VNAME/etc/apt/sources.list
@@ -1720,9 +1746,9 @@ chattr +i $OFFICIALPATH/$VNAME/etc/apt/sources.list
 
 ### Disabling network on the guest
 
-As long as AI/ML webUIs do not implement strict security measures (almost impossible for them to do all!) you can work disable the network if you do not have to install or update something. Some more best practices
+As long as AI/ML webUIs do not implement strict security measures (almost impossible for them to do all!) you can work disable the network if you do not have to install or update something. Some more best practices contain e.g.
 
-- Link as read-only your $COMFYUIROOT/models folder of ComfyUI into the container via a BIND rule if you do not want all models within the container
+- to link as read-only your `$COMFYUIROOT/models` folder of ComfyUI into the container via a BIND rule if you do not want all models within the container.
 
 Enable/ disable network of the container from the host
 
@@ -1748,8 +1774,8 @@ ip link | grep $IFACE
 
 - After installing a plugin, start it with disabled network and see whether it complains or does not work.
 - Check with the iptables script to update your whitelisted domains regularly.
-- BE AWARE that github is not necessarily a secure repository, but you need it for AI/ML stuff (!). Malware can be everywhere even in checked repos/ webspaces/ etc.
-- So in sum the security steps taken are only partially even if the manual effort above may look like nonsense/ overkill. A container without network cannot do that much, but that does not mean to disable common sense. Regular scans and reading on official github repos/ reddit groups/ etc. are good to receive information about malware as soon as possible.
+- BE AWARE that github is not necessarily a secure repository, but you need it for AI/ML stuff (!). Malware can be everywhere and even in checked repos/ webspaces/ etc. - not to mention this can change from one second to the next one without notice.
+- So in sum the security steps taken are only partially even if the manual effort above may look like nonsense/ overkill. A container without any network cannot do that much on the net, but that does not mean to disable common sense. Regular scans and reading on official github repos/ reddit groups/ etc. are good to receive information about malware as soon as possible.
 - IF someone wants to automate/ script some of the parts here for daily security checks, just go ahead!
 
 
@@ -1791,7 +1817,7 @@ Only security *.debs are allowed and all other repos are blocked by default. Una
 
 ### Delay of network bringing up
 
-Bringing up the network of the guest seems to require some time. There is... nothing to do, but after 10-20 secs it should work fine. While working on this no errors could be found that showed any reasons for the delay of the network coming up, so if anyone has a solution to fasten it, please feel free to post it. Once the network runs, there are no problems to be reported (speed, stability, etc.).
+Bringing up the network of the guest seems to require sometmes time, normally not with static IP. There is... nothing to do, but after 10-20 secs it should work fine. While working on this no errors could be found that showed any reasons for the delay of the network coming up, so if anyone has a solution to fasten it, please feel free to post it. Once the network runs, there are no problems to be reported (speed, stability, etc.).
 
 
 ### Bound to systemd
@@ -1801,8 +1827,12 @@ Everything here uses systemd, esp. the network setup. If that does not suit anyo
 
 ### Chosen browser
 
-We use firefox as a browser, others are ok as well, We won't go to the internet with it anyway, so choose what suits you, and which works with your AI/ML webUI.
+We used firefox as a browser to demonstrate the basic proof of concept. Others are ok as well, We won't go to the internet with it anyway, so choose what suits you, and which works with your AI/ML webUI. From our experience the ungoogled chromium version works best. An existent firefox version can be purged by `root` in the container.
 
+```bash
+apt-get remove --purge firefox-esr
+apt-get autoremove
+```
 
 ### Whitelisted domains + DNS
 
