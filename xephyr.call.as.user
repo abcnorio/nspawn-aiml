@@ -1,0 +1,2 @@
+#!/bin/bash
+Xephyr -ac -extension MIT-SHM -extension XTEST -screen 1920x1080 -br -reset :1

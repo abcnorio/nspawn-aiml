@@ -1,0 +1,50 @@
+#!/bin/bash
+
+/sbin/modprobe nvidia
+
+if [ "$?" -eq 0 ]; then
+  # Count the number of NVIDIA controllers found.
+  NVDEVS=`lspci | grep -i NVIDIA`
+  N3D=`echo "$NVDEVS" | grep "3D controller" | wc -l`
+  NVGA=`echo "$NVDEVS" | grep "VGA compatible controller" | wc -l`
+
+  N=`expr $N3D + $NVGA - 1`
+  for i in `seq 0 $N`; do
+    mknod -m 666 /dev/nvidia$i c 195 $i
+  done
+
+  mknod -m 666 /dev/nvidiactl c 195 255
+
+else
+  exit 1
+fi
+
+/sbin/modprobe nvidia-uvm
+
+if [ "$?" -eq 0 ]; then
+  # Find out the major device number used by the nvidia-uvm driver
+  D=`grep nvidia-uvm /proc/devices | awk '{print $1}'`
+  mknod -m 666 /dev/nvidia-uvm c $D 0
+else
+  exit 1
+fi
+
+# required if the screen is not connected to the NVIDIA GPU(s) and uses e.g. a iGPU
+mknod -m 755 /dev/nvidia-caps c $(cat /proc/devices | grep nvidia-caps | awk '{print $1}') 80
+mknod -m 755 /dev/nvidia-uvm-tools c $(cat /proc/devices | grep nvidia-uvm | awk '{print $1}') 80
+
+## that's how it should look like on the host
+## required IF GPU is not used for the screen but just for number crunching
+## then while booting not all entries below /dev are created
+##
+## ls -la /dev|grep nvidia
+#crw-rw-rw-   1 root root    195,     0 17. Jul 12:14 nvidia0
+#crw-rw-rw-   1 root root    195,     1 17. Jul 12:14 nvidia1
+#drwxr-xr-x   2 root root            80 17. Jul 12:21 nvidia-caps
+#crw-rw-rw-   1 root root    195,   255 17. Jul 12:14 nvidiactl
+#crw-rw-rw-   1 root root    195,   254 17. Jul 12:14 nvidia-modeset
+#crw-rw-rw-   1 root root    235,     0 17. Jul 12:14 nvidia-uvm
+#crw-rw-rw-   1 root root    235,     1 17. Jul 12:21 nvidia-uvm-tools
+
+echo -e "success."
+exit 0

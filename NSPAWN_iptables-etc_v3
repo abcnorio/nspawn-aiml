@@ -7,7 +7,7 @@
 # check values
 
 CONTAINERNAME="aiml-gpu"
-LOCALDOMAIN="localdomain.xx"
+LOCALDOMAIN="anicca-vijja.xx"
 CONTAINERROOT=/var/lib/machines/$CONTAINERNAME
 CONTAINERIF='vb-'$CONTAINERNAME
 CONTAINERIP=192.168.1.114
@@ -197,7 +197,7 @@ $IPTABLES -n --list $CONTAINERNAME-fw --line-numbers
 md5sum $CONTAINERROOT/etc/hosts > $CONTAINERBP/etc/hosts.md5
 
 # bring back network for container
-echo "bring uo interface $CONTAINERIF."
+echo "bring up interface $CONTAINERIF."
 ip link set $CONTAINERIF up
 
 exit 0
