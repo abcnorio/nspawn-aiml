@@ -6,18 +6,42 @@
 - [Security](#security)
 - [Files](#files)
 - [TUTORIAL](#tutorial)
+-- [Define variables](#define-variables)
+-- [Check values](#check-values)
+-- [Prepare folder for container](#prepare-folder-for-container)
+-- [Manage the network](#manage-the-network)
+-- [Access to NVIDIA GPU](#access-to-nvidia-gpu)
+-- [Mounting folders from host](#mounting-folders-from-host)
+-- [Prepare GPU](#prepare-gpu)
+-- [X access](#x-access)
+-- [Some restrictions](#some-restrictions)
+-- [Install conda environment and AI/ML engine](#install-conda-environment-and-ai/ml-engine)
+-- [Whitelisted domains](#whitelisted-domains)
+-- [Install ComfyUI](#install-comfyui)
 - [Systemd sandboxing](#systemd-sandboxing)
 - [Network restrictions of the container](#network-restrictions-of-the-container)
 - [Notes about browsers](#notes-about-browsers)
-- [Alternative browser sources](#Alternative-browser-sources)
+-- [More considerations about security](#more-considerations-about-security)
 - [Good habits](#Good-habits)
-- [More restrictions](#More-restrictions)
-- [Whitelisted domains](#Whitelisted-domains)
+- [Further possible restrictions](#further-possible-restrictions)
+-- [Disabling network on the guest](#disabling-network-on-the-guest)
 - [Summary and reflections](#summary-and-reflections)
+-- [Bridge](#bridge)
+-- [Forward X from container to host to be able to use a browser](#forward-x-from-container-to-host-to-be-able-to-use-a-browser)
+-- [Prevent certain files from being changed](#prevent-certain-files-from-being-changed)
+-- [Restrictions of *.deb packages](#restrictions-of-*.deb-packages)
+-- [Delay of network bringing up](#delay-of-network-bringing-up)
+-- [Bound to systemd](#bound-to-systemd)
+-- [Chosen browser](#chosen-browser)
+-- [Whitelisted domains + DNS](#whitelisted-domains-+-dns)
+-- [Path of whitelist](#path-of-whitelist)
+-- [NVIDIA + multiple GPUs](#nvidia-+multiple-gpus)
+-- [ipv6](#ipv6)
 - [End of the tutorial](#End-of-the-tutorial)
 - [Security considerations](#Security-considerations)
 - [Further tutorials on systemd-nspawn](#Further-tutorials-on-systemd-nspawn)
 - [DISCLAIMER](#disclaimer)
+- [Errors](#errors)
 - [TODOs](#todos)
 - [License](#license)
 
@@ -83,31 +107,30 @@ First, look into the script and change names and variables according to your wis
 ```bash
 # outside container
 # set variables on host
-
 # path to root
-ROOT=/root
+export ROOT=/root \
 # home folder
-HOMIE=/root
+HOMIE=/root \
 # name of the nspawn container
-VNAME="aiml-gpu"
+VNAME="aiml-gpu" \
 # debian version
-DEBOS="trixie"
+DEBOS="trixie" \
 # architecture
-ARCH="amd64"
+ARCH="amd64" \
 # relative path to nspawn container
-NSPAWNPATH="NSPAWN_vcontainer"
+NSPAWNPATH="NSPAWN_vcontainer" \
 # main path to containers in general
-OFFICIALPATH=/var/lib/machines
+OFFICIALPATH=/var/lib/machines \
 # full path to container
-CONTFULLPATH=$HOMIE/$NSPAWNPATH
+CONTFULLPATH=$HOMIE/$NSPAWNPATH \
 # physical device for bridge
 # change that to match your system!!!
 # physical device
-PHYSDEV="enp3s0"
+PHYSDEV="enp3s0" \
 # DNS server
-DNSIP=192.168.1.78
+DNSIP=192.168.1.78 \
 # gateway
-GATEWAY=192.168.1.1
+GATEWAY=192.168.1.1 \
 # IP of the host on the LAN
 HOSTLANADDRESS=192.168.1.115/24
 ```
@@ -367,10 +390,10 @@ We have to set the following values according to your needs. The ethernet interf
 - gateway on the LAN
 
 ```bash
-DNSIP=192.168.1.78
-LOCALIP=192.168.1.114
-GATEWAY=192.168.1.1
-BC=24
+export DNSIP=192.168.1.78 \
+LOCALIP=192.168.1.114 \
+GATEWAY=192.168.1.1 \
+BC=24 \
 IFACE="host0"
 ```
 
@@ -379,7 +402,7 @@ First we change the hostname so that we never confused host and container. Repla
 ```bash
 # hostname must be the same as above $VNAME
 # $HOSTNAME = $VNAME
-HOSTNAME="aiml-gpu" # insert your values
+export HOSTNAME="aiml-gpu" \ # insert your values
 LOCALDOMAIN="localdomain.xx"
 echo "$HOSTNAME" > /etc/hostname
 hostname $(cat /etc/hostname)
@@ -1143,8 +1166,7 @@ conda create --name comfyui-exp python=3.12
 conda activate comfyui-exp
 ```
 
-
-## Whitelisted domains
+### Whitelisted domains
 
 Before installing AI/ML engines, we do some more SECURITY. We switch to the host as `root` and activate the `iptables` script. Check the values within the script before running it. But it asks you anyway whether values are ok. The following domains are whitelisted after default installation.
 
@@ -1318,7 +1340,7 @@ $CONTAINERBP/NSPAWN_iptables-etc_v3
 # - try again
 ```
 
-## Install ComfyUI
+### Install ComfyUI
 
 Go back to the running container
 
