@@ -1,5 +1,6 @@
 # Basic security considerations for AI/ML engines (SD, ComfyUI, ...) using systemd-nspawn
 
+
 ## TOC
 - [Advance Organizer](#advance-organizer)
 - [Overview](#overview)
@@ -45,11 +46,15 @@
 - [TPossible TODOs and extensions](#possible-todo-and-extensions)
 - [License](#license)
 
+
 ## Advance Organizer
 
 The goal is to restrict (inhibit) access of AI/ML engines to network, other computers and data, etc. without disturbing their tasks (e.g. image generation). This is achieved by using a `systemd-nspawn` container along with `iptables` rules and a `nested xserver`.
 
 The tutorial uses a `systemd` based `chroot` environment (jail) to prevent the container and running processes to access the LAN or internet except for whitelisted domains and to deny all access to the host to protect personal data, passwords, etc. The firewall iptables rules from the host work based on a combination of IP address and virtual ethernet device name of the container (viewed from the host's perspective). Therefor the container's IP must be static and definite. For AI/ML the GPU(s) can be used from within the container along with a conda environment. Within the container the AI/ML engine user is separated from the user who calls a browser for webUI interaction. No personal data must be stored within the container. AI/ML models should be bound read-only into the container (e.g. AI/ML models and checkpoints, etc.). For output a read-write folder should be chosen that is not used for anything else. The host prevents certain files from being changed by the container (e.g. no DNS allowed). The approach does not prevent from infection, but makes it much harder in case of infection to let personal data be stolen or any other harm done. In case of infection the container can be wiped and replaced by an infected-free version. This is enhanced by certain general suggestions to enhance security while working with rapid changing environments like AI/ML engines. This requires more manual work, python dry-runs, and common sense - not necessarily an automatic process, and certainly not one that all users appreciate.
+
+Some topics are noted more than once. This is intentional and not meant for advanced users.
+
 
 ## Overview
 
@@ -61,6 +66,7 @@ If ever a container is compromised, wipe it completely, and restore it from an i
 
 The install is not fully automatic due to the local LAN set up that can vary a lot between computer and associated network. It requires to understand basically network setup under Linux. Otherwise one can mess it up and won't find a solution easily. That's the only real hurdle of the tutorial here. The container creation itself is straightforward. We work with Debian (`.deb` based) and `systemd`. If one is convenient with a different network setup, apply that but keep in mind to configure the network properly so that the virtual network interface name and IP of the guest container match the values in the `iptables` script. The IP of the container must be static. Otherwise it won't work. What is essential for `systemd-nspawn` containers is a bridge on the host. We do not do any pci passthrough of the GPU. For that you can set up a kvm/ proxmox/ ... virtual machine if that is more convenient. This is not covered by the tutorial, but there are enough tutorials on the net covering this subject. And it is not that difficult, but requires more computer resources than the `systemd-nspawn` container approach. The `systemd-nspawn` container shares the same kernel with the host and it must use the same driver version of the GPU (here: NVIDIA).
 
+
 ## Security
 
 The `systemd-nspawn` approach shares the same kernel with the host which may be a security risk [1](https://unix.stackexchange.com/questions/145739/what-makes-systemd-nspawn-still-unsuitable-for-secure-container-setups) in case of kernel exploits. This is the same situation with [docker](https://opensource.com/business/14/7/docker-security-selinux). It can be run as a [non-privileged user](https://wiki.archlinux.org/title/Systemd-nspawn#Unprivileged_containers) but only one non-privileged user per container.
@@ -68,6 +74,7 @@ Concretely, `systemd-nspawn` is like a `chroot` environment and in contrast to `
 Whether and how `systemd-nspawn` can be infected by malware is difficult to assess, but it is certainly more secure than not using it and installing AI/ML plugins directly on the host - without any kind of jail/ sandbox/ whatever. Of course one can switch to [`LXC`](https://wiki.archlinux.org/title/Linux_Containers) or `kvm`/ [`libvirt`](https://wiki.archlinux.org/title/Libvirt) full virtualization. It is not the goal of this tutorial to make a definite proposal about the most secure approach but to provide a manageable and practical solution for ordinary users without in-depth knowledge of `*nix` systems and security features. If someone has this knowledge, just go ahead and extend the points made here or question them - esp. if easier solutions are possible.
 Be aware that dropping capabilities to `systemd service` can decrease the security and not enhance it. One should also combine approaches like `systemd-nspawn` with [`firejail`](https://firejail.wordpress.com/) or the more complicated [bubblewrap](https://github.com/containers/bubblewrap), [apparmor](https://www.apparmor.net/) or [SELinux](https://www.redhat.com/de/topics/linux/what-is-selinux).
 Be also aware that allowing network access or access to `/dev` (required for GPUs) is a security risk, but one that cannot easily be avoided. For AI/ML engines one can shutdown the network while working and allow only for upgrades and installations (high security risk!), but the access to `/dev` is essential to be able to use the GPU.
+
 
 ## Files
 
@@ -94,6 +101,7 @@ So you need some terminals... if in one terminal the initial values (see scripts
 
 Some of the comments in the scripts may be helpful for some users. Others can just ignore them.
 
+
 ## TUTORIAL
 
 In the following some terms are used
@@ -109,6 +117,7 @@ First, look into the script and change names and variables according to your wis
 - As long as the bridge `br0` works, the tutorial should work.
 - If you need initially more packages, add additional packages to the `debootstrap` command.
 - We focus here on a minimal system and you may even try later to remove some packages not required anymore.
+
 
 ### Define variables
 
@@ -142,6 +151,7 @@ GATEWAY=192.168.1.1 \
 HOSTLANADDRESS=192.168.1.115/24
 ```
 
+
 ### Check values
 ```bash
 echo "root path = $ROOT"
@@ -164,6 +174,7 @@ or using
 ```bash
 export -p
 ```
+
 
 ### Prepare folder for container
 
@@ -203,6 +214,7 @@ Now we install the base system via `debootstrap`. Only a minimal system and some
 ```bash
 debootstrap  --arch $ARCH --variant=minbase --include=systemd-container,systemd,dbus,iproute2,net-tools,iputils-ping $DEBOS $CONTFULLPATH/$VNAME http://deb.debian.org/debian/
 ```
+
 
 ### Manage the network
 
@@ -621,6 +633,7 @@ ifconfig
 
 Don't be confused if the container shown `vb-$VNAME` does not show any IP address. This is due to our static config, it would be different using a local DHCP for the container.
 
+
 ### Access to NVIDIA GPU
 
 The next step is to create a basic config for `systemd-nspawn` container to allow access to a NVIDIA GPU.
@@ -683,6 +696,7 @@ else
 fi
 ```
 
+
 ### Mounting folders from host
 
 The section of the [config-file](https://www.freedesktop.org/software/systemd/man/latest/systemd.nspawn.html) above `/etc/systemd/nspawn/...snpawn` below the section `[Files]` can contain more folders/ files so they are accessible from within the container, e.g. AI/ML models, the output of AI/ML engines, etc. Be aware that you should mount always as **read-only** unless you really want and have to write to it. Best is to separate
@@ -723,6 +737,7 @@ Bind=/$PATH-ON-HOST
 ```
 
 Extend this in accordance to your needs and replace dummy variables by real paths (host, container).
+
 
 ### Prepare GPU
 
@@ -941,6 +956,7 @@ xhost +local:
 # reverse it by
 # xhost -local
 ```
+
 
 ### X access
 
@@ -1205,6 +1221,7 @@ conda create --name comfyui-exp python=3.12
 conda activate comfyui-exp
 ```
 
+
 ### Whitelisted domains
 
 Before installing AI/ML engines, we do some more SECURITY. We switch to the host as `root` and activate the `iptables` script. Check the values within the script before running it. But it asks you anyway whether values are ok. The following domains are whitelisted after default installation.
@@ -1382,6 +1399,7 @@ $CONTAINERBP/NSPAWN_iptables-etc_v3
 # - try again
 ```
 
+
 ### Install ComfyUI
 
 Go back to the running container
@@ -1497,6 +1515,7 @@ SystemCallFilter=@system-service
 
 # systemctl restart $PROCESSNAME.service
 ```
+
 
 ## Network restrictions of the container
 
@@ -1753,6 +1772,7 @@ systemctl restart unattended-upgrades
 systemctl status unattended-upgrades
 ```
 
+
 ## Further possible restrictions
 
 We reduce our `/etc/apt/sources.list` to NVIDIA stuff and security updates. Be aware that you may have to reverse that in case NVIDIA updates would require other system libraries to be updated. Then add the original `sources.list`, so we need to back it up. If you really do not want files to be altered you can `chattr +i $FILE` them from the host. However, malware probably has its own IP based servers, so the restrictions on the level of allowed domains may be more effective.
@@ -1806,6 +1826,7 @@ We use `chattr` as `root` on the host to make it really read-only.
 chattr +i $OFFICIALPATH/$VNAME/etc/apt/sources.list
 ```
 
+
 ### Disabling network on the guest
 
 As long as AI/ML webUIs do not implement strict security measures you can work along with disabling the network if you do not have to install or update something. Then it is not needed unless you want to upload to some server - then you can use the host for that. It is almost impossible for webUI developers to do all security steps possible. The effort and number of possibilities to consider on each different system is just too much.
@@ -1849,6 +1870,7 @@ ping -c 3 8.8.8.8 # check google DNS
 ## Summary and reflections
 
 There are some things to consider seriously - do some research on it if you are not familiar with the points before you start.
+
 
 ### Bridge
 
@@ -2021,6 +2043,7 @@ Although the tutorial was tested under varying conditions, we cannot rule out an
 NO WARRANTY of any kind is involved here. There is no guarantee that the software is free of error or consistent with any standards or even meets your requirements. Do not use the software or rely on it to solve problems if incorrect results may lead to hurting or injurying living beings of any kind or if it can lead to loss of property or any other possible damage to the world, living beings, non-living material or society as such. If you use the software in such a manner, you are on your own and it is your own risk.
 
 IF someone has a better and more secure approach, just go ahead and share it. The tutorial here is meant to suggest an approach that can be applied also by users not deeply involved with security. It allows for a certain protection of the host but there is no guarantee to be protected from malware without any active and valid scanners observing computer behavior and downloaded files for content. Best is always to keep personal data completely separate from such productive environment that undergo a rapid change like it is the case with AI/ML. But to be fair, not everyone can afford another computer to keep things separately. For those this tutorial may act as a help or inspiration.
+
 
 ## Errors
 
