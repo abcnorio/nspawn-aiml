@@ -15,7 +15,7 @@
   - [Prepare GPU](#prepare-gpu)
   - [X access](#x-access)
   - [Some restrictions](#some-restrictions)
-  - [Install conda environment and AI/ML engine](#install-conda-environment-and-ai/ml-engine)
+  - [Install conda environment and AI/ML engine](#install-conda-environment-and-aiml-engine)
   - [Whitelisted domains](#whitelisted-domains)
   - [Install ComfyUI](#install-comfyui)
 - [Systemd sandboxing](#systemd-sandboxing)
@@ -42,49 +42,57 @@
 - [Further tutorials on systemd-nspawn](#Further-tutorials-on-systemd-nspawn)
 - [DISCLAIMER](#disclaimer)
 - [Errors](#errors)
-- [TODOs](#todos)
+- [TPossible TODOs and extensions](#possible-todo-and-extensions)
 - [License](#license)
 
 ## Advance Organizer
 
-The goal is to restrict (inhibit) access of AI/ML engines to network, other computers and data, etc. without disturbing their tasks (e.g. image generation). This is achieved by using a systemd-nspawn container along with iptables rules and a nested xserver.
+The goal is to restrict (inhibit) access of AI/ML engines to network, other computers and data, etc. without disturbing their tasks (e.g. image generation). This is achieved by using a `systemd-nspawn` container along with `iptables` rules and a `nested xserver`.
 
-The tutorial uses a systemd based chroot environment (jail) to prevent the container and running processes to access the LAN or internet except for whitelisted domains and to deny all access to the host to protect personal data, passwords, etc. The firewall iptables rules from the host work based on a combination of IP address and virtual ethernet device name of the container (viewed from the host's perspective). Therefor the container's IP must be static and definite. For AI/ML the GPU(s) can be used from within the container along with a conda environment. Within the container the AI/ML engine user is separated from the user who calls a browser for webUI interaction. No personal data must be stored within the container. AI/ML models should be bound r/o into the container. The host prevents certain files from being changed by the container (e.g. no DNS allowed). The approach does not prevent from infection, but makes it much harder in case of infection to let personal data be stolen or any other harm done. In case of infection the container can be wiped and replaced by an infected-free version. This is enhanced by certain general suggestions to enhance security while working with rapid changing environments like AI/ML engines. This requires more manual work, python dry-runs, and common sense - not necessarily an automatic process, and certainly not one that all users appreciate.
+The tutorial uses a `systemd` based `chroot` environment (jail) to prevent the container and running processes to access the LAN or internet except for whitelisted domains and to deny all access to the host to protect personal data, passwords, etc. The firewall iptables rules from the host work based on a combination of IP address and virtual ethernet device name of the container (viewed from the host's perspective). Therefor the container's IP must be static and definite. For AI/ML the GPU(s) can be used from within the container along with a conda environment. Within the container the AI/ML engine user is separated from the user who calls a browser for webUI interaction. No personal data must be stored within the container. AI/ML models should be bound read-only into the container (e.g. AI/ML models and checkpoints, etc.). For output a read-write folder should be chosen that is not used for anything else. The host prevents certain files from being changed by the container (e.g. no DNS allowed). The approach does not prevent from infection, but makes it much harder in case of infection to let personal data be stolen or any other harm done. In case of infection the container can be wiped and replaced by an infected-free version. This is enhanced by certain general suggestions to enhance security while working with rapid changing environments like AI/ML engines. This requires more manual work, python dry-runs, and common sense - not necessarily an automatic process, and certainly not one that all users appreciate.
 
 ## Overview
 
-The following tutorial can basically be applied to other AI/ML engines (not just ComfyUI) that require frequent downloads from not necessarily trusted webspaces on github or anywhere else. The tutorial uses the systemd-nspawn container approach as a base for the AI/ML engine. Via whitelisted domains and iptables firewall rules the container is restricted regarding network access.
+The following tutorial can basically be applied to other AI/ML engines (not just ComfyUI) that require frequent downloads from not necessarily trusted webspaces (github, huggingface, civitai, ...) or whereever material is located that has to be downloaded to get things working. The tutorial uses the `systemd-nspawn` container approach as a base for the AI/ML engine. Via whitelisted domains and iptables firewall rules the container is restricted regarding network access.
 
-Nevertheless this is **not a full security protection tutorial**. Quite the opposite, the approach has more strength in case of infection by malware - esp. after a possible infection an attacker is bound to the restrictions of the container and cannot easily access the host, get personal data, reach arbitrary  IPs on the internet, and the LAN. This is a compromise and no automatic solution that frees one from using one's own intelligence. Without some manual work and commonse sense nothing will protect you from possible infections. And even then that can happen. Getting malware infection does not mean one is a dumb user. This just can happen, so we try here to reduce the consequences.
+Nevertheless this is **not a full security protection tutorial**. Quite the opposite, the approach has more strength in case of infection by malware - esp. after a possible infection an attacker is bound to the restrictions of the container and cannot easily access the host, get personal data, reach arbitrary  IPs on the internet, and the LAN. This is a compromise and no automatic solution that frees one from using one's own intelligence. And even then something can happen. Suffering from malware infection does not mean one is a dumb user. This just can happen, so we try here to reduce the consequences. That's all. **Reduce the overall cost**.
 
-If ever a container is compromised, wipe it, and restore it from an infected-free backup. That's why it is best to store downloaded models outside of the container and mount them read-only into the container. Confirm initially with public available hashes after download that your versions match the hashes of official sources.
+If ever a container is compromised, wipe it completely, and restore it from an infected-free backup stored separately on a different physical device not connected during infection. That's why it is best to store downloaded models outside of the container and mount them read-only into the container. Confirm initially with public available hashes after download that your versions match the hashes of official sources.
 
-The install is not fully automatic due to the local LAN set up that can vary a lot between computer and associated network. It requires to understand basically network setup under Linux. Otherwise one can mess it up and won't find a solution easily. That's the only real hurdle of the tutorial here. The container creation itself is straightforward. We work with Debian (.deb based) and systemd only. If one is convenient with a different network setup, apply that but keep in mind to configure the network properly so that virtual interface name and IP of the guest container match the values in the iptables script. The IP of the container must be static. Otherwise it won't work. What is essential for nspawn containers is a bridge on the host. We do not do any pci passthrough of the GPU. For that you can set up a kvm/ proxmox/ ... virtual machine if that is more convenient. This is not covered by the tutorial, but there are enough tutorials on the net covering this subject. And it is not that difficult, but requires more computer resources than the nspawn container approach. The nspawn container shares the same kernel with the host and it must use the same driver version of the GPU (here: NVIDIA).
+The install is not fully automatic due to the local LAN set up that can vary a lot between computer and associated network. It requires to understand basically network setup under Linux. Otherwise one can mess it up and won't find a solution easily. That's the only real hurdle of the tutorial here. The container creation itself is straightforward. We work with Debian (`.deb` based) and `systemd`. If one is convenient with a different network setup, apply that but keep in mind to configure the network properly so that the virtual network interface name and IP of the guest container match the values in the `iptables` script. The IP of the container must be static. Otherwise it won't work. What is essential for `systemd-nspawn` containers is a bridge on the host. We do not do any pci passthrough of the GPU. For that you can set up a kvm/ proxmox/ ... virtual machine if that is more convenient. This is not covered by the tutorial, but there are enough tutorials on the net covering this subject. And it is not that difficult, but requires more computer resources than the `systemd-nspawn` container approach. The `systemd-nspawn` container shares the same kernel with the host and it must use the same driver version of the GPU (here: NVIDIA).
 
 ## Security
 
-The systemd-nspawn approach shares the same kernel with the host which may be a security risk [1](https://unix.stackexchange.com/questions/145739/what-makes-systemd-nspawn-still-unsuitable-for-secure-container-setups) in case of kernel exploits. This is the same situation with [docker](https://opensource.com/business/14/7/docker-security-selinux). It can be run as a [non-privileged user](https://wiki.archlinux.org/title/Systemd-nspawn#Unprivileged_containers) but only one non-privileged user per container.
-However, systemd-nspawn is like a `chroot` environment and in contrast to `chroot` virtualizes the whole file system hierarchy and process tree. The [man-page](https://www.freedesktop.org/software/systemd/man/latest/systemd-nspawn.html#Security%20Options) offers much more fine-tuning for security which is **not covered by this tutorial**. The `systemd service` allows for more [sandboxing options](https://www.redhat.com/sysadmin/mastering-systemd).
+The `systemd-nspawn` approach shares the same kernel with the host which may be a security risk [1](https://unix.stackexchange.com/questions/145739/what-makes-systemd-nspawn-still-unsuitable-for-secure-container-setups) in case of kernel exploits. This is the same situation with [docker](https://opensource.com/business/14/7/docker-security-selinux). It can be run as a [non-privileged user](https://wiki.archlinux.org/title/Systemd-nspawn#Unprivileged_containers) but only one non-privileged user per container.
+Concretely, `systemd-nspawn` is like a `chroot` environment and in contrast to `chroot` virtualizes the whole file system hierarchy and process tree. The [man-page](https://www.freedesktop.org/software/systemd/man/latest/systemd-nspawn.html#Security%20Options) offers much more fine-tuning for security which is **not covered by this tutorial**. The `systemd service` allows for more [sandboxing options](https://www.redhat.com/sysadmin/mastering-systemd).
 Whether and how `systemd-nspawn` can be infected by malware is difficult to assess, but it is certainly more secure than not using it and installing AI/ML plugins directly on the host - without any kind of jail/ sandbox/ whatever. Of course one can switch to [`LXC`](https://wiki.archlinux.org/title/Linux_Containers) or `kvm`/ [`libvirt`](https://wiki.archlinux.org/title/Libvirt) full virtualization. It is not the goal of this tutorial to make a definite proposal about the most secure approach but to provide a manageable and practical solution for ordinary users without in-depth knowledge of `*nix` systems and security features. If someone has this knowledge, just go ahead and extend the points made here or question them - esp. if easier solutions are possible.
 Be aware that dropping capabilities to `systemd service` can decrease the security and not enhance it. One should also combine approaches like `systemd-nspawn` with [`firejail`](https://firejail.wordpress.com/) or the more complicated [bubblewrap](https://github.com/containers/bubblewrap), [apparmor](https://www.apparmor.net/) or [SELinux](https://www.redhat.com/de/topics/linux/what-is-selinux).
-Be also aware that allowing network access or access to /dev (required for GPUs) is a security risk, but one that cannot easily be avoided. For AI/ML engines one can shutdown the network while working and allow only for upgrades and installations (high security risk!), but the access to /dev is essential to be able to use the GPU.
+Be also aware that allowing network access or access to `/dev` (required for GPUs) is a security risk, but one that cannot easily be avoided. For AI/ML engines one can shutdown the network while working and allow only for upgrades and installations (high security risk!), but the access to `/dev` is essential to be able to use the GPU.
 
 ## Files
 
-The tutorial is stored in `nspawn_deboostrap_nvidia-gpu_install-staticIP-bridge_v8`. To create iptables rules we use the script `NSPAWN_iptables-etc_v3`. It should be run as `root`. Make it executable by `chmod +x NSPAWN_iptables-etc_v3`.
+To create `iptables` rules we use the script `NSPAWN_iptables-etc_v3`. It should be run as `root`. Make it executable by `chmod +x NSPAWN_iptables-etc_v3`. One has to check the values in it carefully. What it does is for the container using its virtual network interface is
+
+- to allow access based on a whitelist of domains
+- block all other access to the internet and the LAN
+- re-run it with a different whitelist to change access to the net
+
+The natural security risk is that the host can change the virtual network interface name on the host so that the iptables rules become meaningless. But this requires access to the host - then probably the computer is already compromised. One could also add a switch to block all other virtual network devices on localhost completely.
+
 At the beginning of each file you have to adjust values according to local needs like names, IPs, etc. Those are essential and must be chosen in accordance to your preferences and computer environment.
 
 The tutorial is mostly "copy & paste work" using different terminals:
 
-- on host as `root`
+- on host as `root` to perform configuration of `systemd` on the host
 - on host as `desktop user` (only to start nested xserver if needed)
-- in container as `root`
-- in container as `user1` (`$USERAI`) for AI/ML stuff (e.g. create cond environment, start ComfyUI engine, ...)
-- in container as `user2` (`$BROWSER`) only for browser and interacting with the webUI
+- on host as `root` to log into the container
+  - in container as `root`to configure network and install packages
+  - in container as `user1` (`$USERAI`) for AI/ML stuff (e.g. create conda environment, start AI/ML engine, ...)
+- in container as `user2` (`$BROWSER`) only for browser usage and interacting with the webUI
 
-So you need some terminals... if in one terminal the initial values (see scripts) are missing, go back to the start of the script and copy the appropriate parts into the terminal and check them for accuracy. Be aware that values between host and container naturally differ ie. keep in mind which terminal you use at this very moment.
+So you need some terminals... if in one terminal the initial values (see scripts) are missing, go back to the start of the script and copy the appropriate parts into the terminal and check them for accuracy. Be aware that values between host and container naturally differ ie. keep in mind which terminal you use at this very moment. TO make it easier the hostname of the container is changed asap to reduce confusion.
 
-Some of the comments in the scripts may be helpful, otherwise just ignore them.
+Some of the comments in the scripts may be helpful for some users. Others can just ignore them.
 
 ## TUTORIAL
 
@@ -95,9 +103,9 @@ In the following some terms are used
 
 First, look into the script and change names and variables according to your wishes.
 
-- If a path does not suit you, change it.
-- As network bridge we use `br0`, set this up with the network tools of your choice or follow the tutorial using `systemd-networkd`.
-- The tutorial is based on Debian trixie, but it should work for other versions as well (but not tested!).
+- If a path does not suit you or fits to the system, change it.
+- As network bridge we use `br0`. Please set this up with the network tools of your choice or follow the tutorial using `systemd-networkd`.
+- The tutorial is based on Debian `trixie`, but it should work for other versions as well (but not tested!).
 - As long as the bridge `br0` works, the tutorial should work.
 - If you need initially more packages, add additional packages to the `debootstrap` command.
 - We focus here on a minimal system and you may even try later to remove some packages not required anymore.
@@ -124,8 +132,7 @@ OFFICIALPATH=/var/lib/machines \
 # full path to container
 CONTFULLPATH=$HOMIE/$NSPAWNPATH \
 # physical device for bridge
-# change that to match your system!!!
-# physical device
+# change that to match your system
 PHYSDEV="enp3s0" \
 # DNS server
 DNSIP=192.168.1.78 \
@@ -152,9 +159,16 @@ echo "host LAN IP/BC address = $HOSTLANADDRESS"
 # Check the values above carefully!
 ```
 
+or using
+
+```bash
+export -p
+```
+
 ### Prepare folder for container
 
-We work as `root` - if you don't like that, replace all root commands with `sudo ...`
+We work as `root` - if you don't like that, replace all `root` commands with `sudo ...`. First we create the path where to store the container and create a symlink from `/var/lib/machines` to that folder.
+
 ```bash
 su -
 apt-get update
@@ -184,19 +198,22 @@ else
 fi
 ```
 
-Install the base system via debootstrap. We use only a minimal system and some network utilities.
+Now we install the base system via `debootstrap`. Only a minimal system and some network utilities are installed.
+
 ```bash
 debootstrap  --arch $ARCH --variant=minbase --include=systemd-container,systemd,dbus,iproute2,net-tools,iputils-ping $DEBOS $CONTFULLPATH/$VNAME http://deb.debian.org/debian/
 ```
 
 ### Manage the network
 
-Out example covers a host with bridge `br0`, a static IP for the host, and later we apply a static IP to the container as well. Proceed only if you do not have already a bridge.
+Our example covers a host with bridge `br0`, a static IP for the host, and later we apply a static IP to the container as well. Proceed only if you do not have already a bridge.
 
 > [!CAUTION]
 > READ GUIDES FOR YOUR SPECIFIC OS how to create a bridge if there is none (!). DO NOT TRY to let the network be managed by more than one service (!) Choose ONLY one, and then apply this service consequently.
 
 If you do not want to create a bridge with `systemd-networkd`, look for alternatives (`/etc/network/interfaces`, `NetworkManager/nmcli`, `bridge-utils/brctl`, ...), and apply those tools. Look into the tutorials of your OS/ Linux distribution which network management is the default and proceed.
+
+First we investigate the status quo.
 
 ```bash
 # static IP for host
@@ -236,7 +253,7 @@ systemctl disable networking.service
 mv /etc/network/interfaces /etc/network/interfaces_BP
 ```
 
-Now we create a systemd-networkd bridge from scratch. First we check for the following files and their content, so you can compare later how they change.
+Now we create a `systemd-networkd` bridge from scratch. First we check for the following files and their content, so you can compare later how they change.
 
 ```bash
 cat /etc/systemd/network/br0.netdev
@@ -244,7 +261,7 @@ cat /etc/systemd/network/br0.network
 cat /etc/systemd/network/lan0.network
 ```
 
-First we create the bridge `br0`.
+We start by creating the bridge `br0`.
 
 ```bash
 cat > /etc/systemd/network/br0.netdev << EOF
@@ -266,7 +283,7 @@ Bridge=br0
 EOF
 ```
 
-To create the LAN access for the host with a static IP, you have to know the following values, because creating a bridge normally results in a different IP than the physical device had before (now the physical device has no IP anymore, it is bound to the bridge):
+To create the LAN access for the host with a static IP, you have to know the following values, because creating a bridge normally results in a different IP compared to the previous value of the physical device. Now the physical device has no IP anymore, it is bound to the bridge and the IP is connected to the bridge:
 
 - a free IP for the bridge on the LAN
 - check the route to the gateway
@@ -289,7 +306,7 @@ Gateway=$GATEWAY
 EOF
 ```
 
-For DHCP you can do (see official Debian guide) uncomment the `DHCP=ipv4 entry`. We use `ipv4`, not `ipv6`. Then you have to comment out the `Address` and `Gateway` fields.
+For DHCP (see official Debian guide) you can uncomment the `DHCP=ipv4 entry`. We use `ipv4`, not `ipv6`. Then you have to comment out the `Address` and `Gateway` fields as well.
 
 ```bash
 cat > /etc/systemd/network/lan0.network << EOF
@@ -304,7 +321,7 @@ DHCP=ipv4
 EOF
 ```
 
-Now we restart network - be aware if anything is not configured properly and you work remotely you cut yourself completely off the computer. With local access via keyboard you can always reverse things or via remote console.
+Now we restart the network - ***be aware if anything is not configured properly and you work remotely you cut yourself completely off the computer***. With local access via keyboard you can always reverse things back to its original state or work via a remote console.
 
 ```bash
 systemctl enable systemd-networkd
@@ -321,18 +338,18 @@ dig github.com
 dig github.com +short #140.82.121.4
 ```
 
-If all works well, now start the container for the first time manually. First check we have still our variables exported. You can do that whenever something does not look ok, e.g. accidentially exiting the `root` account will remove the exported variables or using a different terminal, etc. This happens more often than expected.
+If all works well, now start the container for the first time manually. First we confirm that we still have our variables exported. You can do that whenever something does not look ok, e.g. accidentially exiting a terminal, etc. This happens more often than expected. That's why we used `export` initially to make values available on the system independent from closing a terminal.
 
 ```bash
 export -p
 ```
-If the variables exported earlier are not here, re-apply them.
+If the variables exported earlier are not here, re-apply them. The container is started with
 
 ```bash
 systemd-nspawn -D $OFFICIALPATH/$VNAME -U --machine $VNAME
 ```
 
-First, we set a `root` password
+Let's set a `root` password
 
 ```bash
 # inside container
@@ -347,7 +364,7 @@ echo 'pts/1' >> /etc/securetty
 exit
 ```
 
-Next we add an entry on the host for the overall config of the container and start with entries for the network.
+Next we add an entry on the host for the overall config of the container and start with entries for the network. Now work as `root` on the host.
 
 ```bash
 cat > /etc/systemd/nspawn/$VNAME.nspawn << EOF
@@ -383,9 +400,9 @@ export VNAME="aiml-gpu" # change according to your previous decision
 machinectl login $VNAME
 ```
 
-We have to set the following values according to your needs. The ethernet interface within the container is mostly called `host0` automatically, just leave that. We create a static IP for the container, so
+We have to set the following values according to your environment. The ethernet interface within the container is mostly called `host0` automatically, just leave that. We create a static IP for the container. Required are
 
-- you need a free static IP on the LAN for the container
+- a free static IP on the LAN for the container
 - DNS server on the LAN
 - gateway on the LAN
 
@@ -397,13 +414,13 @@ BC=24 \
 IFACE="host0"
 ```
 
-First we change the hostname so that we never confused host and container. Replace it by your values.
+First we change the hostname so that we never confuse host and container. Replace it by your values.
 
 ```bash
 # hostname must be the same as above $VNAME
 # $HOSTNAME = $VNAME
 export HOSTNAME="aiml-gpu" \ # insert your values
-LOCALDOMAIN="localdomain.xx"
+LOCALDOMAIN="localdomain.xx" # insert your values
 echo "$HOSTNAME" > /etc/hostname
 hostname $(cat /etc/hostname)
 ```
@@ -415,12 +432,18 @@ hostname
 exit
 ```
 
-We have to logout from the container and login again so that the bash prompt shows us the proper hostname. We block the usual setup to prevent any other default values to change our plans
+We have to log out from the container and log in again so that the bash prompt shows the proper hostname. We block the default network setup to prevent any other default values to change our plans. Check whether the prompt is now showing the new hostname. Before that check whether the exported values are still valid (we have not rebooted the container).
 
 ```bash
+# check for initial values
+export -p
+
+# check for existent network config file and if it exists rename it
 if [[ -f '/etc/systemd/network/80-container-host0.network' ]]; then
   echo -e "file '/etc/systemd/network/80-container-host0.network' exists with content:"
   cat '/etc/systemd/network/80-container-host0.network'
+  echo -e 'Rename the file with ending *_orig"
+  mv /etc/systemd/network/80-container-host0.network /etc/systemd/network/80-container-host0.network_orig
 else
   echo -e "create symlink of '/etc/systemd/network/80-container-host0.network' to '/dev/null'"
   ln -sf /dev/null /etc/systemd/network/80-container-host0.network
@@ -447,11 +470,12 @@ Let's check
 cat /etc/systemd/network/vethernet.network
 ```
 
-If that looks ok we enable and start the systemd network inside the container
+If that looks ok we enable and (re)start the systemd network inside the container
 
 ```bash
 systemctl enable systemd-networkd.service
-systemctl start systemd-networkd.service
+systemctl restart systemd-networkd.service
+systemctl status systemd-networkd.service
 ```
 
 ...and check the network values
@@ -461,7 +485,7 @@ ip route show
 ifconfig
 ```
 
-Some note - it seems this sometimes requires quite some time till it works and may take up to 20 seconds out of unknown reasons (no error messages in `journalct -f` on the host). So just wait, experience showed it works, but takes time.
+Some note - it seems that under rare but unknown circumstances this requires quite some time till the networks shows up and may take up to 20 seconds. No error messages in `journalct -f` on the host could be found. So just wait, experience demonstrated it works, but - very seldom - takes some time.
 
 ```bash
 # check - wait for some time, it seems to take time till it works...
@@ -557,7 +581,7 @@ cat /proc/sys/net/ipv6/conf/$IFACE/disable_ipv6
 # echo 1 > /proc/sys/net/ipv6/conf/$IFACE/disable_ipv6 
 ```
 
-We switch to the host to prepare ip forwarding and the netfilter bridge kernel module that is required for iptables rules applied to the virtual ethernet device of the container.
+We switch to the host to prepare ip forwarding and the netfilter bridge kernel module that is required for `iptables` rules applied to the virtual ethernet device of the container.
 
 ```bash
 # outside container
@@ -594,12 +618,13 @@ Apply it by restarting the network and applying the rules configured above.
 systemctl restart systemd-networkd.service && sysctl -p
 ifconfig
 ```
+
 Don't be confused if the container shown `vb-$VNAME` does not show any IP address. This is due to our static config, it would be different using a local DHCP for the container.
 
 ### Access to NVIDIA GPU
 
-The next step is to create a basic config for systemd-nspawn container to allow access to a NVIDIA GPU.
-AMD and Intel Arc users have to adjust the 'Bind' commands, due to the lack of AMD and Intel GPUs the tutorial cannot cover this part for those GPUs. Sorry.
+The next step is to create a basic config for `systemd-nspawn` container to allow access to a NVIDIA GPU.
+AMD and Intel Arc users have to adjust the 'Bind' commands or whatever is required. Due to the lack of AMD and Intel GPUs the tutorial cannot cover this part for those GPUs. Sorry.
 At first, we configure X using `xhost` and its alternative `Xephyr` which both allow us to see a graphical user interface from the container on the host. We perform some changes to the nspawn config of the container. With high prob - s.a. - this file already exists, so you have to compare the parts below `[Exec]` and `[Network]` and perform changes manually. The part below `[Files]` probably does not exist and can just be copied.
 
 ```bash
@@ -660,7 +685,15 @@ fi
 
 ### Mounting folders from host
 
-The section of the [config-file](https://www.freedesktop.org/software/systemd/man/latest/systemd.nspawn.html) above `/etc/systemd/nspawn/...snpawn` below the section `[Files]` can contain more folders/ files so they are accessible from within the container, e.g. AI/ML models, the output of AI/ML engines, etc. Be aware that you should mount always as **read-only** unless you really want and have to write to it. The paths are defined according to the manpage:
+The section of the [config-file](https://www.freedesktop.org/software/systemd/man/latest/systemd.nspawn.html) above `/etc/systemd/nspawn/...snpawn` below the section `[Files]` can contain more folders/ files so they are accessible from within the container, e.g. AI/ML models, the output of AI/ML engines, etc. Be aware that you should mount always as **read-only** unless you really want and have to write to it. Best is to separate
+
+- models, checkpoints, addons, sources of any kind (read-only)
+
+from
+
+- output (read-write)
+
+The paths are defined according to the manpage:
 
 ```
 [...]
@@ -693,7 +726,7 @@ Extend this in accordance to your needs and replace dummy variables by real path
 
 ### Prepare GPU
 
-We work with NVIDIA and to prepare entries below `/dev` for NVIDIA we use some script from [NVIDIA](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#runfile-verifications) itself and extend it a little bit.
+Using a GPU, here NVIDIA, requires to prepare entries below `/dev`. For NVIDIA we use some script originally from [NVIDIA](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#runfile-verifications) itself and extend it a little bit.
 AMD + Intel Arc users have to find equivalents for their GPUs. It is important to have all entries below `/dev`.
 
 ```bash
@@ -764,15 +797,14 @@ $ROOT/preparenspawngpu
 ls -la /dev|grep nvidia
 ```
 
-Each time you boot the computer or before you start the container this script should be run. Otherwise if device entries are missing the container cannot access the GPU properly and won't even start.
-We switch back to the running container and prepare the NVIDIA drivers.
-
+Each time you boot the computer or before you start the container this script should be run. Otherwise if device entries are missing the container cannot access the GPU properly and may not start at all.
+Now switch back to the running container and prepare the NVIDIA drivers.
 
 ```bash
 # inside container
 
-# if ever you are not logged in or the container does not run, do as root
-# and copy variables from the start of the script - on the host:
+# if ever you are not logged in or the container does not run, work as root
+# and copy ie. export variables from the start of the script - on the host:
 machinectl start $VNAME
 machinectl login $VNAME
 
@@ -817,7 +849,7 @@ Re-check on the host, because the NVIDIA driver must be the same version on the 
 dpkg -l | grep nvidia
 ```
 
-Switch back to the container
+Switch back to the container to install NVIDIA drivers and a browser (`firefox-esr`) to test the nested xserver later.
 
 ```bash
 # inside container
@@ -829,7 +861,7 @@ apt-get update && apt-get install nvidia-driver nvidia-cuda-toolkit nvidia-smi n
 If the update of the repos ever does not proceed, break with CTRL-C and restart the command. If it still has problems, switch to a different mirror.
 At some point the call above leads to asking you to configure your keyboard. Just follow instructions on the screen.
 
-Now we create users, because our `root` user within the container cannot access the GPU. Use names as you like it and apply a password for each user.
+Now we create users, because the `root` user within the container cannot access the GPU. Use names as you like it and apply a password for each user.
 
 ```bash
 # create users, change according to your needs
@@ -841,7 +873,7 @@ BROWSER="browser"
 adduser $BROWSER
 ```
 
-Switch to the host to edit some nspawn specific touch related to GPU.
+Switch to the host to edit some `systemd-nspawn` specific touch related to GPU.
 
 ```bash
 # outside of container
@@ -858,6 +890,7 @@ This opens up an editor where you have to copy the following lines into it where
 DeviceAllow=/dev/nvidiactl
 DeviceAllow=/dev/nvidia0
 # if you have more than one nvidia GPU
+# uncomment the following
 #DeviceAllow=/dev/nvidia1
 DeviceAllow=/dev/nvidia-modeset
 DeviceAllow=/dev/nvidia-uvm
@@ -887,7 +920,7 @@ Let's go back to the container
 machinectl login $VNAME
 ```
 
-Now, login as user `$USERAI` and not as `root`, because the `nvidia-smi` does not work if called as `root`. So you should work as a user.
+Now, login as user `$USERAI` and not as `root`, because `nvidia-smi` does not work if called as `root`. So you should work as a user.
 
 ```bash
 # check for NVIDIA, must give some meaningful output about accessible NVIDIA GPUs
@@ -896,19 +929,18 @@ nvtop
 ```
 
 If the output is correct, your GPU works inside the container.
-We switch now to the desktop user on the host on a new terminal, not as `root`, because we deal now with X-forward from container to the host to be able to use a browser for later webUI interaction.
+We switch now to the desktop user on the host on a new terminal, not as `root`, because we deal now with X-forward from the container to the host to be able to use a browser for later webUI interaction.
 
 > [!CAUTION]
 > Never allow a `xhost +` on your computer, then everybody can connect via X (!) We restrict it to `local`.
 
 ```bash
 # outside container as desktop user (not root!)
-# never do just 'xhost +' - this would enable **everyone** to connect to you
+# never do just 'xhost +' - this would enable **everyone** to connect to you via X
 xhost +local:
-# reverse
+# reverse it by
 # xhost -local
 ```
-
 
 ### X access
 
@@ -929,7 +961,7 @@ export DISPLAY=:0.0
 firefox-esr
 ```
 
-Try to focus the window, do something, resize the window, etc. and see whether it works. There is an alternative to the `xhost` method which is more [secure](https://github.com/mviereck/x11docker/wiki/Short-setups-to-provide-X-display-to-container) - a nested X server called `Xephyr`.
+Try to focus the window, do something, resize the window, etc. and see whether the browser works. There is an alternative to the `xhost` method which is more [secure](https://github.com/mviereck/x11docker/wiki/Short-setups-to-provide-X-display-to-container) - a nested X server called `Xephyr`.
 
 First we install it on the host, switch to `root` on the host
 
@@ -959,18 +991,18 @@ BindReadOnly=/tmp/.X11-unix
 BindReadOnly=$HOMIE/.Xauthority
 ```
 
-by (replace `$USER` by the desktop username)
+by (replace `$BROWSER` by the username in the container that uses the browser)
 
 ```bash
 # xhost/ xauth
 #BindReadOnly=/tmp/.X11-unix
-#BindReadOnly=/home/$USER/.Xauthority
+#BindReadOnly=/home/$BROWSER/.Xauthority
 # xephyr
 BindReadOnly=/tmp/.X11-unix/X1
 ```
 
 Save the file and exit the editor.
-On the host as desktop user open up a new terminal and start the nested xserver with the following values (adjust the screen size)
+On the host as the desktop user open up a new terminal and start the nested xserver with the following values to adjust the screen size properly.
 
 ```bash
 # start nested X-server use user on the host
@@ -989,7 +1021,7 @@ A new window pops up on the desktop. First we have to reboot the container as `r
 machinectl reboot $VNAME
 ```
 
-Then we log in as `root` to the container, because we need to install `xdotool` which allows to change the resolution of the browser to the window size of the `Xephyr` server. Then we immediately log out of the container.
+Then we log in as `root` to the container, because we need to install `xdotool` which allows to change the resolution of the browser to the window size of the `Xephyr` server. This is necessary because there are incidents reported that the window does not automatically resizes. Then we immediately log out of the container.
 
 ```bash
 # as root in the container
@@ -1009,14 +1041,17 @@ And set the `DISPLAY` variable and start the browser (here: firefox) along with 
 
 ```bash
 export DISPLAY=:1
-firefox && sleep 3s && xdotool search --onlyvisible --class Firefox windowsize 100% 100%
+firefox &
+sleep 3s
+xdotool search --onlyvisible --class Firefox windowsize 100% 100%
 ```
-Important is to remember that if you reboot your host, you have to enable the Xephyr via the desktop user. Otherwise the container won't boot, because it expects the entries for `Xephyr` in `/etc/systemd/nspawn/aiml-gpu.nspawn` which is the temporary but important file `/tmp/.X11-unix/X1`.
+
+Important is to remember that if you reboot your host, you have to start `Xephyr` via the desktop user. Otherwise the container won't boot, because it expects the entries for `Xephyr` in `/etc/systemd/nspawn/aiml-gpu.nspawn` which exptects the temporary but important file `/tmp/.X11-unix/X1`.
 
 
 ### Some restrictions
 
-Now we add some restrictions to the container. The `private-users` options changes towards high `uids/guids` of all users in the containers including container's `root` user. We switch on the host to the `root` terminal
+Now we add some restrictions to the container. The `private-users` options changes towards high `uids/guids` of all users in the containers including container's `root` user. We switch on the host to the `root` terminal.
 
 ```bash
 machinectl stop $VNAME
@@ -1032,7 +1067,7 @@ And have a look
 ls -la $OFFICIALPATH/$VNAME
 ```
 
-This should be owned by the new used with very high ID, e.g.
+This should be owned by the new user with very high ID, e.g.
 
 ```
 root@xxx:~# ls -la $OFFICIALPATH/$VNAME
@@ -1068,7 +1103,7 @@ apt-get install less --no-install-recommends
 ls -Ralh $OFFICIALPATH/$VNAME | less
 ```
 
-If there are already created users on the container - what we did above - we have to give them back their ID. For this we log into the container as `root`. We change for every user the ownership of the `/home` folder. We could have created the users afterwards, but then due to the restrictions introduced (high UID for `root`) it fails to create a proper password and therefor fails to create a user. This failure looks like:
+If there are already created users on the container - what we did above - we have to give them back their ID. For this we log into the container as `root`. We change for every user the ownership of the `/home` folder. We could have created the users afterwards, but then due to the restrictions introduced (high UID for `root`) it fails to create a proper password and therefor fails to create a user completely. This failure looks like:
 
 ```
 root@aiml-gpu:~# adduser ai
@@ -1081,19 +1116,21 @@ warn: wrong password given or password retyped incorrectly
 Try again? [y/N]
 ```
 
-So we have to create the users before we proceed, and it is easier to change ownerships of `/home` folders.
+So we have to create the users before we proceed, and it is easier to change ownerships of `/home` folders afterwards.
 
 ```bash
 # which users to we have
 ls -la /home
+# repeat that for every user below /home
 chmod -R $user1:$user1 /home/$user1
 #
 ```
 
 To see that everything works, we can
+
 - stop the container
 - stop the the Xephyr nested xserver
-- start the Xephyr nested xserver
+- restart everything
 
 ```bash
 Xephyr -ac -extension MIT-SHM -extension XTEST -screen 1920x1080 -br -reset :1
@@ -1104,7 +1141,9 @@ Xephyr -ac -extension MIT-SHM -extension XTEST -screen 1920x1080 -br -reset :1
 
 ```bash
 export DISPLAY=:1
-firefox && sleep 3s && xdotool search --onlyvisible --class Firefox windowsize 100% 100%
+firefox &
+sleep 3s
+xdotool search --onlyvisible --class Firefox windowsize 100% 100%
 ```
 
 If the browser fills the whole `Xepyhr` screen, everything is working, and we proceed.
@@ -1159,7 +1198,7 @@ Log out and log in again as user `$USERAI`.
 ```bash
 # log out and log in as $USERAI
 # create python env
-# check https://github.com/comfyanonymous/ComfyUI#manual-install-windows-linux which python version is recommended
+# check https://github.com/comfyanonymous/ComfyUI#manual-install-windows-linux which python version is recommended, because this changes over time
 conda create --name comfyui-exp python=3.12
 
 # activate python env
@@ -1190,6 +1229,8 @@ files.pythonhosted.org
 with a corresponding entry in `/etc/hosts` on the container.
 
 ```bash
+# remember the name of the container you gave it initially
+# here 'aiml-gpu'
 cat /var/lib/machines/aiml-gpu/etc/hosts
 
 127.0.0.1	localhost
@@ -1237,7 +1278,7 @@ CONTAINERNAME="aiml-gpu" # = $VNAME
 LOCALDOMAIN="localdomain.xx"
 CONTAINERROOT=/var/lib/machines/$CONTAINERNAME
 CONTAINERIF='vb-'$CONTAINERNAME
-CONTAINERIP=192.168.1.114
+CONTAINERIP=192.168.1.114 # double check that this is the IP of the container!!!
 BASE=/root
 CONTAINERBP=$BASE/$CONTAINERNAME'_BP'
 IPTABLES=/usr/sbin/iptables
@@ -1321,7 +1362,8 @@ cat > /var/lib/machines/$CONTAINERNAME/etc/hosts  << EOF
 EOF
 ```
 
-Basically, the `iptables` script first disables the network of the container and sets the DNS entry in `$CONTAINERROOT/etc/resolv.conf` to `127.0.0.1` (localhost). Then it protects the file r/o with `chattr -i [...]`. The whitelisted domains are all resolved and written to `/etc/hosts` inside the container. The file is later made r/o as well and cannot be changed by the container. The next step is to use `iptables` to create chains for `INPUT` and `FORWARD` to allow for stateful firewall and drop everything not being part of the whitelisted domain list. The domains are converted to `ipv4` by using `dig`. `ipv6` is not supported. The created firewall rules are printed on the terminal and it finishes by enabling the network of the container. Each time the whitelisted domains file is changed, the `iptables` script has to be re-run. The initial whitelisted domains are printed at the end of the tutorial. They are sufficient to apply everything from the tutorial (conda environment, install ComfyUI, Debian security updates).
+Basically, the `iptables` script first disables the network of the container and sets the DNS entry in `$CONTAINERROOT/etc/resolv.conf` to `127.0.0.1` (localhost). Then it protects the file as read-only with the mighty `chattr -i [...]`. The whitelisted domains are all resolved and written to `/etc/hosts` inside the container. The file is later marked as read-only as well and cannot be changed by the container. The next step is to use `iptables` to create chains for `INPUT` and `FORWARD` to allow for stateful firewall and drop everything not being part of the whitelisted domain list. The domains are converted to `ipv4` by using `dig`. `ipv6` is not supported. The created firewall rules are printed on the terminal and it finishes by enabling the network of the container.
+Each time the whitelisted domains file is changed, the `iptables` script has to be re-run. The initial whitelisted domains are printed at the end of the tutorial. They are sufficient to apply everything from the tutorial (conda environment, install ComfyUI, Debian security updates). If something changes, just add the missing domain to the whitelist (see error message on the terminal) and re-run the script.
 
 ```bash
 # outside container
@@ -1370,7 +1412,7 @@ cd ../..
 pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu12 --dry-run
 ```
 
-In principle, you can check for malware after EACH `--dry-run`. Files are on the computer, not not yet installed.
+In principle, you can check for malware automatically (with scanner) or manually (check the code itself or look for unwanted and unclear binaries) after EACH `--dry-run`. Files are on the computer, but not yet installed. **This is recommended**.
 
 ```bash
 # re-check with https://github.com/comfyanonymous/ComfyUI#manual-install-windows-linux
@@ -1396,7 +1438,7 @@ cd ../..
 python main.py
 ```
 
-If ComfyUI starts properly, log in separately on a different terminal as user `$BROWSER` into the container. Either use the `xhost` method or the nested xserver `xephyr`. We use the `xhost` method here, but the nested xserver has a more [secure](https://github.com/mviereck/x11docker/wiki/Short-setups-to-provide-X-display-to-container) reputation, so you should use that. If it cannot connect with the `xhost` method, allow local access on the host as desktop user with `xhost +local:` and re-try. Some things may not work always properly like mouse behaviour, etc. which cannot be covered by this tutorial.
+If ComfyUI starts properly, log in separately on a different terminal as user `$BROWSER` into the container. Either use the `xhost` method or the nested xserver `Xephyr`. We use the `xhost` method here, but the nested xserver has a more [secure](https://github.com/mviereck/x11docker/wiki/Short-setups-to-provide-X-display-to-container) reputation, so you should use that. If it cannot connect with the `xhost` method, allow local access on the host as desktop user with `xhost +local:` and re-try. Some things may not work (with firefox) always properly like mouse behaviour, etc. which cannot be covered by this tutorial. If that happens, switch to chromium or better the [ungoogled chromium](https://github.com/ungoogled-software/ungoogled-chromium) version.
 
 ```bash
 # xhost method
@@ -1404,13 +1446,12 @@ export DISPLAY=:0.0
 firefox-esr
 ```
 
-Go to ComfyUI-Manager, install a SD model, and use the default template to create an image. If you need to download from a page  (e.g. some huggingface mirror or similar) not covered by the whitelisted domains, just add the domain to the `whitelisted.domains.txt` and re-run `NSPAWN_iptables-etc_v3`.
-If that works, the rest will work as well...
+Go to ComfyUI-Manager, install a SD model, and use the default template to create an image. Better is to download models via the host and export them as a read-only bind mount to the container. If you need to download mostly python packages from a page  (e.g. some huggingface mirror or similar) not covered by the whitelisted domains, just add the domain to the `whitelisted.domains.txt` and re-run `NSPAWN_iptables-etc_v3`. If that works, the rest will work as well...
 
 
 ## Systemd sandboxing
 
-More restrictions can be added by using `systemd` sandboxing. This demands are more in-depth research into `systemd` and its capabilities.
+More restrictions can be added by using `systemd` sandboxing. This demands are more in-depth research into `systemd` and its endless capabilities. This is not covered by the tutorial, but you can have a look and experiment with it:
 
 ```
 #--private-users-ownership=chown
@@ -1466,9 +1507,9 @@ Let's have a loot at the whitelisted domains used for the iptables script by def
 #
 # github.com 		# code, be aware MALWARE can come from here!
 # raw.githubusercontent.com	# code, be aware MALWARE can come from here!
-# huggingface.co 	# AI models (always use safetensors, not ckpts)
-# civitai.com		# AI models stable diffusion (always use safetensors, not ckpts)
-# pypi.org		# python stuff (check and do 'pip install ... dry-run' before applying
+# huggingface.co 	# AI models (always use safetensors, never ckpts to avoid any executing code in models)
+# civitai.com		# AI models stable diffusion (always use safetensors, never ckpts)
+# pypi.org		# python stuff (check and do 'pip install ... dry-run' before applying installs)
 # dowload.pytorch.org	# pyTorch
 # files.pythonhosted.org # python / pip
 # debian mirrors + security.debian.org + deb.debian.org 	# updates and security fixes
@@ -1481,7 +1522,7 @@ There is no reason to allow for more from within the container. Even models can 
 > [!WARNING]
 > We do not cover here the usage of malware scanners, rootkit detectors, and audits. That requires serious in-depth knowledge of systems, esp. because **detection does not mean hardening**. Here, *diagnostics is not already applied intervention*.
 
-However, if some is interested in that topic, please visit the following security related pages for Linux. All pages lead to external resources (checked 2024-08-29).
+However, if someone is interested in that topic, please visit the following security related pages for Linux. All pages lead to external resources (checked 2024-08-29).
 
 - [malware detection tools](https://linuxsecurity.expert/security-tools/linux-malware-detection-tools)
 - [malware and rootkits](https://www.tecmint.com/scan-linux-for-malware-and-rootkits)
@@ -1497,7 +1538,7 @@ However, if some is interested in that topic, please visit the following securit
 - chkrootkit (check for rootkits)
 - LMD (linux malware detect)
 
-And for the people who know what they do.. btw - not everything is FOSS and this is just a list of possibilities, not a recommendation (listed in alphabetical order):
+And for the people who know what they do.. btw - not everything is FOSS and this is just a list of possibilities, not a recommendation. The list is ordered alphabetically:
 
 - AIDE
 - maltrail
@@ -1511,10 +1552,10 @@ And for the people who know what they do.. btw - not everything is FOSS and this
 - vuls
 - yara
 
-For those again who are from the IT world 'apparmor' and 'SELinux' are good tools to create an additional layer of security. 'firejail' can be compiled with 'apparmor' support, and may be another wrapper around the browser within the container.
+For those again who are from the IT world 'apparmor' and 'SELinux' are good tools to create an additional layer of security. 'firejail' can be compiled with 'apparmor' support, and may be another wrapper around the browser within the container or applied to other processes.
 
 > [!TIP]
-> Check the net for what is possible ie. which technologies are available and can be applied by normal users. Use several engines parallel to each other. Use cron-jobs to check on the container from the host each night. Let the cron-job send you a local mail to your admin account with a summary. Check after each install of plugins, models, etc. BEFORE starting your AI/ML engine. Use common sense, have a look at the python code, the requirements, repo reputation (but not just by counting any stars or thumbs-up!), etc., and check what is downloaded and from where. Keep a log of everything (e.g. python lib installs) with stderr as well as stdout so you can see the output on the terminal and it is also saved in a file:
+> Check the net for what is possible ie. which technologies are available and can be applied by normal users. Use several engines parallel to each other. Use cron-jobs to check on the container from the host each night and after every dry-run install. Let the cron-job send you a local mail to your admin account with a summary. Check after each install of plugins, models, etc. BEFORE starting your AI/ML engine. Use common sense, have a look at the python code, the requirements, repo reputation (but not just by counting any stars or thumbs-up!), etc., and check what is downloaded and from where. Keep a log of everything (e.g. python lib installs) with stderr as well as stdout so you can see the output on the terminal and it is also saved in a file:
 
 ```bash
 [bash command] 2&>1 | tee logfile.txt
@@ -1524,17 +1565,14 @@ For those again who are from the IT world 'apparmor' and 'SELinux' are good tool
 > This tutorial is no guarantee to be malware free, but it makes it alittle bit harder to be infected, and with a container it is harder to infect your whole system, get data, etc. and do damage in general.
 
 > [!IMPORTANT]
-> Make a backup of the container before starting with anything, and store it on a different device independent from the host. In case of infection, just wipe the container, boot from external live system, and scan your host as well thoroughly. Check the host carefully, and only then restart with the backup of the container. Store the AI/ML models outside of the host and perform another backup of it.
+> Make a backup of the container before starting with anything, and store it on a different device independent from the host. In case of infection, just wipe the container, boot from external live system, and scan your host as well very thoroughly. Check the host carefully, and only then restart with the backup of the container. Store the AI/ML models outside of the host and perform another backup of it.
 
 
 ## Notes about browsers
 
-The following commands should be called from inside container as `root`.
+The following considerations should remind us that a browser installations downloads a lot of stuff on a system. So either restrict the browser via e.g. firejail/ flatpak/ snap or accept that it installs a lot of stuff.
 
-- A browser installations downloads a lot of stuff on your system...
-- So either restrict the browser via e.g. firejail/ flatpak/ snap or accept that it installs a lot of stuff
-
-An example - just a check what should be done BEFORE installation
+An example - just a check what should be done BEFORE installation. Work as `root`.
 
 ```bash
 apt-get install firefox-esr
@@ -1554,10 +1592,10 @@ Break if you do not want to do that... count the number of packages...
 apt-get install --no-install-recommends [packages]
 ```
 
-- but check that all dependencies are given, if something fails, install the missing libraries/ tools
-- Start the browser later ALWAYS as $USER and never as $ROOT or $USERAI to keep things separately
+- Check that all dependencies are given, if something fails, install the missing libraries/ tools.
+- Start the browser later ALWAYS as $BROWSER user and never as $ROOT or $USERAI to keep things separately.
 - You can also adjust ownership permissions to separate the users from each other even more with `0660`, `0770`, etc. so that only user + group have access, but nobody else.
-- $ROOT is only a valid user for system administration, fortunate some browsers like to tell you it is not a good idea to play browser and root at the same time
+- `root` is only a valid user for system administration. Fortunate some browsers like to tell you it is not a good idea to play browser and be `root` at the same time
 
 Here are some browser examples under Linux:
 
@@ -1589,8 +1627,7 @@ dpkg -i midori_11.3.3_amd64.deb
 midori
 ```
 
-There are incidents when the browser version really does not fit to the OS, then drop that or invest time...
-We want to keep it simple: we won't go to the net, we just need the browser for local access to AI/ML engines, so no need to invest much as $USER.
+There are incidents when the browser version really does not fit to the OS, then drop that or invest time. We want to keep it simple - we won't go to the net, we just need the browser for local access to AI/ML engines. Thus, there is no need to invest much into a browser that does not work out of the box.
 
 - [vivaldi](https://www.vivaldi.com)
 
@@ -1616,7 +1653,7 @@ firefox-esr
 
 - [ungoogled chromium](https://github.com/ungoogled-software/ungoogled-chromium)
 
-And then there is the [ungoogled](https://github.com/ungoogled-software/ungoogled-chromium) version of [chromium](https://www.chromium.org). It can be installed as a [deb package](https://github.com/ungoogled-software/ungoogled-chromium-debian) or via [flatpak](https://flatpak.org). Flatpak works not with the restrictions (high UID) previously introduced. It would require access to `mount proc`, `ldconfig`, etc. If that is not set, you can install it via:
+And then there is the [ungoogled](https://github.com/ungoogled-software/ungoogled-chromium) version of [chromium](https://www.chromium.org). It can be installed as a [deb package](https://github.com/ungoogled-software/ungoogled-chromium-debian) or via [flatpak](https://flatpak.org). Flatpak works not with the restrictions (high UID) previously introduced. It would require access to `mount proc`, `ldconfig`, etc. If that is not set - not recommended! -, you can install it via:
 
 ```bash
 apt-get install flatpak
@@ -1638,7 +1675,7 @@ log out, log in
 ungooglechrom
 ```
 
-Better is to use the [portable linux image](https://ungoogled-software.github.io/ungoogled-chromium-binaries/releases/linux_portable/64bit) which requires just a few more libraries to install. Switch to `root` in the container.
+Better is to use the [portable linux image](https://ungoogled-software.github.io/ungoogled-chromium-binaries/releases/linux_portable/64bit) which requires just a few more libraries to install and avoids third part app stores like snap or flatpak completely. Switch to `root` in the container.
 
 ```bash
 apt-get install wget libnss3
@@ -1653,6 +1690,7 @@ tar xf ungoogled-chromium_134.0.6998.165-1_linux.tar.xz
 cd ungoogled-chromium_134.0.6998.165-1_linux
 export DISPLAY=:1
 ./chrome-wrapper
+# if the resolution does not fit, try the xdotool outlined earlier
 ```
 
 and remove as `root` the `wget` package with
@@ -1671,7 +1709,9 @@ In general,
 - one can use firejail [1](https://firejail.wordpress.com/download-2) [2](https://github.com/netblue30/firejail) along with apparmor (requires compilation, add profiles, etc.) 
 - or there are additional possibilities with [systemd sandboxing](https://www.digitalocean.com/community/tutorials/how-to-sandbox-processes-with-systemd-on-ubuntu-20-04)
 
-One can install browsers via snap and flatpak, whether this is more secure is a good question. And with our security restrictions applied here it does not work. There are notes on [flatkill](https://flatkill.org) that doubt the overall security of flatpak (unclear whether confirmed by third parties!) and there were two cases of malware on snap. But to be fair this is years ago and was detected rather quickly. So this is no real reason against snap, rather it shows they seem to care about malware. However, the snap store itself is closed source and not FOSS. snap originated from canonical and flatpak originated from redhat. As usual it is a matter of trust and trustworthiness of repositories. To keep it simple we make use of Debian repos and there is no need to abbreviate from the official repos. Unless you take a browser directly from the developing company you have to trust a repo. So the choice is up to you.
+One can install browsers via snap and flatpak. Whether this is more secure is a good question, because it introduces another bunch of apps and libraries and we want to minimize everything. With our security restrictions applied here at least flatpak does not work and the same is probably true for snap.
+
+There are notes on [flatkill](https://flatkill.org) that doubt the overall security of flatpak (unclear whether confirmed by third parties!), and there were two cases of malware on snap. But to be fair this is years ago and was detected rather quickly. So this is no real reason against snap, rather it shows they seem to care about malware. However, the snap store itself is closed source and not FOSS. snap originated from Canonical and flatpak originated from Redhat. As usual it is a matter of trust and trustworthiness of companies and repositories. To keep it simple we make use of Debian repos and there is no need to abbreviate from the official repos. Unless you take a browser directly from the developing company or repo (what we did with ungoogled chromium unless you want to build it yourself) you have to trust a repo. So the choice is up to you.
 
 The same is true for NVIDIA closed source repo drivers, but we have no other choice at the moment to get the AI/ML stuff working under *nix with NVIDIA GPUs.
 
@@ -1747,7 +1787,7 @@ deb http://security.debian.org/debian-security trixie-security main contrib non-
 #deb https://www.deb-multimedia.org trixie main non-free
 ```
 
-This will allow only security updates, be aware to install something else you have to re-enable the removed entries.
+This will allow only security updates, be aware that to install new packages you have to re-enable the removed entries.
 We can secure this against overwriting. First create a backup and see how to restore it.
 
 ```bash
@@ -1768,11 +1808,14 @@ chattr +i $OFFICIALPATH/$VNAME/etc/apt/sources.list
 
 ### Disabling network on the guest
 
-As long as AI/ML webUIs do not implement strict security measures (almost impossible for them to do all!) you can work disable the network if you do not have to install or update something. Some more best practices contain e.g.
+As long as AI/ML webUIs do not implement strict security measures you can work along with disabling the network if you do not have to install or update something. Then it is not needed unless you want to upload to some server - then you can use the host for that. It is almost impossible for webUI developers to do all security steps possible. The effort and number of possibilities to consider on each different system is just too much.
 
-- to link as read-only your `$COMFYUIROOT/models` folder of ComfyUI into the container via a BIND rule if you do not want all models within the container.
+Some more best practices contain e.g.
 
-Enable/ disable network of the container from the host
+- Link as read-only the `$COMFYUIROOT/models` folder of ComfyUI into the container via a `BindReadOnly` rule if one does not want all models as read-write within the container. This was mentioned earlier.
+- Enable/ disable network of the container from the host
+
+Enable:
 
 ```bash
 # on host:
@@ -1792,12 +1835,14 @@ Check:
 
 ```bash
 ip link | grep $IFACE
+ping -c 3 8.8.8.8 # check google DNS
 ```
 
-- After installing a plugin, start it with disabled network and see whether it complains or does not work.
+- After installing a plugin, start it with disabled network and see whether it complains about missing network (why does it need an active network?) or does not work. Use the terminal output.
 - Check with the iptables script to update your whitelisted domains regularly.
-- BE AWARE that github is not necessarily a secure repository, but you need it for AI/ML stuff (!). Malware can be everywhere and even in checked repos/ webspaces/ etc. - not to mention this can change from one second to the next one without notice.
+- BE AWARE that github is not necessarily a secure repository, but you need it for AI/ML stuff (!). Malware can be everywhere and even in checked repos/ webspaces/ etc. - not to mention this can change from one second to the next one without any notice.
 - So in sum the security steps taken are only partially even if the manual effort above may look like nonsense/ overkill. A container without any network cannot do that much on the net, but that does not mean to disable common sense. Regular scans and reading on official github repos/ reddit groups/ etc. are good to receive information about malware as soon as possible.
+- Create some `alias` on the host for certain tasks like enable/ disable network for the container, etc.
 - IF someone wants to automate/ script some of the parts here for daily security checks, just go ahead!
 
 
@@ -1807,49 +1852,45 @@ There are some things to consider seriously - do some research on it if you are 
 
 ### Bridge
 
-There are different services like systemd-networkd, networkmanager, networking sysv service using /etc/network/interfaces, etc. and if one mixes them together while create a bridge one may messes up the system and the network shows arbitrary behavior. That's normal if at least two different services are meant to do the same job at the same time. So do no work remotely while using the tutorial - otherwise you may shut yourself out from the network and the computer. This is not a problem for a local computer and all steps regarding network configuration can be reversed. The tutorial works only with systemd-networkd which means other services are completely disabled. There is no need to remove them completely from the system, but to stop and to disable the services from running is a must. Debian has a good tutorial for [systemd-networkd](https://wiki.debian.org/SystemdNetworkd). We work with the static IP on host and on the container, ie. one needs on the LAN
-
-- two IPs, one for the host, one for the guest
-- both IPs have to be static, ie. permanently bound to host and guest
-- how to do that depends on the LAN, the router, and if that is not your network ask an administrator for help
-
-It is also possible to manually create IP, route, gateway, DNS entry, etc. within the container independent from the systemd approach using 'ip' or any other method. The tutorial does not cover all possible combinations. What you need are two things:
+There are different services like `systemd-networkd`, `networkmanager`/ `cnmcli`, `networking sysv service` using `/etc/network/interfaces`, etc. and if one mixes them together while creating a bridge one may messes up the system and the network shows arbitrary behavior. That's normal if at least two different services are meant to do the same job at the same time. They just do it differently and do not communicate with each other. The system does not inhibit you to install more than one networking service. Thus, do no work remotely while using the tutorial - otherwise you may shut yourself out from the network and the computer. This is not a problem for a local computer or a remote console, and all steps regarding network configuration can be reversed. The tutorial works only with `systemd-networkd` which means other services are completely disabled. There is no need to remove them completely from the system, but to stop and to disable the services from running is a must. Debian has a good tutorial for [systemd-networkd](https://wiki.debian.org/SystemdNetworkd). We work with the static IP on host and on the container. It is also possible to manually create IP, route, gateway, DNS entry, etc. within the container independent from the `systemd` approach using 'ip' or any other method. The tutorial does not cover all possible combinations. What you need are two things:
 
 - static IP for the host
 - static IP for the container (guest)
 - a bridge to allow network access for the host as well as the guest
-- a definite virtual interface name of the container on the host so that iptables rules can rely on a definite combination of virtual interface name + IP
+- a definite virtual interface name of the container on the host so that `iptables` rules can rely on a definite combination of virtual interface name + IP
+- how to do that depends on the LAN, the router, and if that is not your network ask an administrator for help
 
 This will ensure that the container is restricted via firewall rules to whitelisted domains and put away from the LAN.
 
 
 ### Forward X from container to host to be able to use a browser
 
-One can use a nested x-server like Xephyr or `xhost +lan:` to allow access. Xephyr should be preferred because of security. Otherwise, use `xhost +local:`.
+One can use a nested x-server like `Xephyr` or `xhost +lan:` to allow access. `Xephyr` should be preferred because of security. Otherwise, use `xhost +local:`.
+
 
 ### Prevent certain files from being changed
 
-Some things may not look very elegant: E.g. to prevent any changes to `/etc/hosts`, `/etc/resolv.conf`, etc. within the guest we use `chattr +i ...` from the host. This works pretty well and can be reversed, but not from within the container.
+Some things may not look very elegant: E.g. to prevent any changes to `/etc/hosts`, `/etc/resolv.conf`, etc. within the guest by applying `chattr +i ...` from the host. This works pretty well and can be reversed, but not from within the container.
 
 
-### Restrictions of *.deb packages
+### Restrictions of `*.deb` packages
 
-Only security *.debs are allowed and all other repos are blocked by default. Unattended upgrades (security) are enabled. But this can easily be fixed by uncommenting the '#' before the repos if anything is required. We try to keep the system as simple as possible.
+Only security `*.debs` are allowed and all other repos are blocked by default. Unattended upgrades (security) are enabled. But this can easily be fixed by uncommenting the '#' before the repos if anything is required. We try to keep the system as simple as possible.
 
 
 ### Delay of network bringing up
 
-Bringing up the network of the guest seems to require sometmes time, normally not with static IP. There is... nothing to do, but after 10-20 secs it should work fine. While working on this no errors could be found that showed any reasons for the delay of the network coming up, so if anyone has a solution to fasten it, please feel free to post it. Once the network runs, there are no problems to be reported (speed, stability, etc.).
+Bringing up the network of the guest seems to require sometmes time, normally not with static IP. There is... nothing to do, but after 10-20 secs it should work fine. While working on this no errors could be found that showed any reasons for the delay of the network coming up. Probably while testing this was caused by local special characteristics environment and is not a general problem. Once the network runs, there are no problems to be reported (speed, stability, etc.).
 
 
-### Bound to systemd
+### Bound to `systemd`
 
-Everything here uses systemd, esp. the network setup. If that does not suit anyone, feel free to change it, and ensure that the iptables rules still fit. Only the IP is not secure, but virtual interface name + IP cannot easily be spoofed from within the container. So virtual interface name + IP is highly recommended.
+Everything here uses `systemd`, esp. the network setup. If that does not suit anyone, feel free to change it, and ensure that the iptables rules still fit. Only the IP is not secure, but virtual interface name + IP cannot easily be spoofed from within the container. This allows to control the internet behavior of the container.
 
 
 ### Chosen browser
 
-We used firefox as a browser to demonstrate the basic proof of concept. Others are ok as well, We won't go to the internet with it anyway, so choose what suits you, and which works with your AI/ML webUI. From our experience the ungoogled chromium version works best. An existent firefox version can be purged by `root` in the container.
+We used `firefox-esr` as a browser to demonstrate the basic proof of concept. Others are ok as well, We won't go to the internet with it anyway, so choose what suits you, and which works with your AI/ML webUI. From our experience the `ungoogled chromium` version works best. An existent firefox version can be purged by `root` in the container.
 
 ```bash
 apt-get remove --purge firefox-esr
@@ -1858,14 +1899,14 @@ apt-get autoremove
 
 ### Whitelisted domains + DNS
 
-Everything ie. *.debs listed in the script should be whitelisted for install. If you later need other domains, update the whitelist and re-run the iptables script.
+Everything ie. `*.debs` listed in the script should be whitelisted for install. If you later need other domains, update the whitelist and re-run the `iptables` script.
 
-There is no DNS allowed for the nspawn-container, so all whitelisted domains are listed with their ipv4 IP directly in /etc/hosts of the container.
+There is no DNS allowed for the nspawn-container. All whitelisted domains are listed with their ipv4 IP directly in `/etc/hosts` of the container.
 
 
 ### Path of whitelist
 
-The whitelist has a path `$VNAME_BP/whitelisteddomains.txt`. The path can be changed in the iptables script.
+The whitelist has the path `$VNAME_BP/whitelisteddomains.txt`. The path can be changed in the `iptables` script.
 
 
 ### NVIDIA + multiple GPUs
@@ -1877,7 +1918,7 @@ The tutorial basically works for multiple GPUs. But at first it is limited to on
 
 ### ipv6
 
-Sometimes often one does not use or need ipv6. But it seems that systemd-networkd does not allow an easy removal of ipv6 although it should! Thus, just do either a
+One may not use or even need `ipv6`. But it seems that `systemd-networkd` does not allow an easy removal of `ipv6` although it should! Thus, just do either as noted
 
 ```bash
 echo 1 > /proc/sys/net/ipv6/conf/default/disable_ipv6
@@ -1903,7 +1944,7 @@ But this would be necessary to perform after every network restart like
 systemctl restart systemd-networkd
 ```
 
-So you can disable ipv6 kernel modules
+But you can disable ipv6 kernel modules
 
 ```bash
 echo "blacklist ipv6" >> /etc/modprobe.d/blacklist-ipv6.conf
@@ -1919,18 +1960,19 @@ After the next log in check for kernel modules
 lsmod | grep ipv6
 ```
 
-If you want to re-enable ipv6, just remove the newly create file with the entry above, recreate the initramfs, and reboot.
-The iptables rules allow only for ipv4 addresses, so ipv6 does not make much sense here and is not absolutely essential.
+If you want to re-enable `ipv6`, just remove the newly create file with the entry above, recreate the `initramfs`, and reboot.
+The `iptables` rules allow only for `ipv4` addresses, so `ipv6` does not make much sense here and is not absolutely essential.
 
 
 ## End of the tutorial
 
-The tutorial goes up to the point to use NVIDIA GPU within the nspawn-container to be able use ComfyUI with the default template for image generation. For that one has to manually download a model, e.g. SDXL base model. If an image is generated, everything else will work, it means proper GPU passthrough into the container is functioning. You can always check that with
+The tutorial goes up to the point to use NVIDIA GPU within the `nspawn-container` to be able use ComfyUI with the default template for image generation. For that one has to manually download a model, e.g. the SDXL base model or the SD1.5. If an image is generated, everything else will work. A properly generated image means a proper GPU passthrough into the container is functioning. You can always check that with
 
 ```bash
 nvidia-smi
 nvtop
 ```
+
 
 ## Security considerations
 
@@ -1938,11 +1980,11 @@ One should symlink the AI/ML models to external space and download models manual
 
 To be a little bit more secure, one should work the following way:
 
-1. Download only established and well-known plugins. Be cautious in case of new plugins, have a direct manual look at the repo from which you intend to install, look for strange things, look into the source code, posts, etc. Read at the usual places like github discussions, reddit, discord, etc. whether any plugins have not a good reputation.
+1. Download only established and well-known plugins. Be cautious in case of new plugins, have a direct manual look at the repo from which you intend to install, look for strange things, look into the source code, posts, etc. Read at the usual places like github discussions, reddit, discord, etc. whether any plugins have a unclear or insecure reputation. Take such reports seriously unless proofen differently. But don't believe every post.
 2. Download ComfyUI plugins manually, not via the ComfyUI-Manager unless it supports a `dry-run`.
 3. Check the `requirements.txt` of the new plugin.
 4. Do a `pip install [...] --dry-run` from within the plugin directory which downloads the stuff but does not install anything. Now scan those new files with a virus scanner, scan the repo python code visually for any strange or binary stuff, etc., and only if that looks ok, install without `--dry-run` switch, and restart ComfyUI.
-5. Maintain logfiles for each plugins' download process like
+5. Maintain logfiles for each plugins' download process with
 
 ```bash
 pip install -r requirements.txt --dry-run 2>&1 | tee ~/$PLUGINNAME.log
@@ -1984,21 +2026,22 @@ IF someone has a better and more secure approach, just go ahead and share it. Th
 
 The suggestions here do not claim to be definite and error-free but meet personal needs.
 
-## TODOs
+
+## Possible TODOs and extensions
 
 - double cross-check whether `iptables` rules can really drop the `OUTPUT` chain (see script)
-- make installation more (half-)automatic
+- make installation more (half-)automatic, add bash code and put all into a single file (`nspawn_deboostrap_nvidia-gpu_install-staticIP-bridge_v8`)
 - make network setup easier (difficult, too many possibilities in relation to local needs, permissions, etc.)
-- check whether `chattr` can change file attributes from within the container if the host already set those permissions, if the host can change them just mount those files r/o into the container
+- check whether `chattr` can change file attributes from within the container if the host already set those permissions, if the host can change them just mount those files as read-only into the container
 - add some cronjobs for on-access scans of the container, esp. for python installs (...some script...)
 - investigate whether the container really cannot read out keyboard strokes, etc. from the host
-- speed up the network coming up (see delay mentioned above)
 - add some network sniffing (nmap, netstat) and maintain logs of container's network behavior
-- add apparmor profile for nspawn or substitute by SELinux or use apparmor (nested namespaces work?) inside the container to restrict the conda environment and python
+- add `apparmor` profile for `systemd-nspawn` or substitute by SELinux or use `apparmor` (nested namespaces work?) inside the container to restrict the conda environment and Python.
+
 
 ## License
 
-- systemd-nspawn + associated configs [GPL v3](https://www.gnu.org/licenses/gpl-3.0.html)
+- `systemd-nspawn` + associated configs [GPL v3](https://www.gnu.org/licenses/gpl-3.0.html)
 - (extended) [NVIDIA script](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#runfile-verifications) to load uvm modules properly (C) NVIDIA Corporation
 - bash code + text/ notes [GPL v3](https://www.gnu.org/licenses/gpl-3.0.html)
 
