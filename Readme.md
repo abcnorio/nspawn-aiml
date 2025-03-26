@@ -1,4 +1,7 @@
-# Basic security considerations for AI/ML engines (SD, ComfyUI, ...) using systemd-nspawn TOC
+# Basic security considerations for AI/ML engines (SD, ComfyUI, ...) using systemd-nspawn
+
+## TOC
+
 - [Advance Organizer](#advance-organizer)
 - [Overview](#overview)
 - [Security](#security)
@@ -584,7 +587,7 @@ apt-get update && apt-get install procps --no-install-recommends
 systemctl restart systemd-networkd.service && sysctl -p && ifconfig
 ```
 
-As an alternative we can `echo` it to get immediate results. But those won't last for a reboot.
+As an alternative we can `cat` the value `1` to get immediate results. But those won't last for a reboot.
 
 ```bash
 cat /proc/sys/net/ipv6/conf/$IFACE/disable_ipv6
@@ -635,7 +638,7 @@ Don't be confused if the container shown `vb-$VNAME` does not show any IP addres
 ### Access to NVIDIA GPU
 
 The next step is to create a basic config for `systemd-nspawn` container to allow access to a NVIDIA GPU.
-AMD and Intel Arc users have to adjust the 'Bind' commands or whatever is required. Due to the lack of AMD and Intel GPUs the tutorial cannot cover this part for those GPUs. Sorry.
+AMD and Intel Arc users have to adjust the 'Bind' commands or whatever is required. Due to the lack of AMD and Intel GPUs this cannot be covered. Sorry.
 At first, we configure X using `xhost` and its alternative `Xephyr` which both allow us to see a graphical user interface from the container on the host. We perform some changes to the nspawn config of the container. With high prob - s.a. - this file already exists, so you have to compare the parts below `[Exec]` and `[Network]` and perform changes manually. The part below `[Files]` probably does not exist and can just be copied.
 
 ```bash
@@ -1060,7 +1063,7 @@ sleep 3s
 xdotool search --onlyvisible --class Firefox windowsize 100% 100%
 ```
 
-Important is to remember that if you reboot your host, you have to start `Xephyr` via the desktop user. Otherwise the container won't boot, because it expects the entries for `Xephyr` in `/etc/systemd/nspawn/aiml-gpu.nspawn` which exptects the temporary but important file `/tmp/.X11-unix/X1`.
+Important is to remember that if you reboot your host, you have to start `Xephyr` via the desktop user. Otherwise the container won't boot, because it expects the entries for `Xephyr` in `/etc/systemd/nspawn/aiml-gpu.nspawn` which expects the temporary but important file `/tmp/.X11-unix/X1`.
 
 
 ### Some restrictions
@@ -1289,14 +1292,16 @@ cat /var/lib/machines/aiml-gpu/etc/hosts
 The following variables have to be set - new is just the backup folder of processed container files, and its base. Change those values in the `NSPAWN_iptables-etc_v3` script to what suits the local needs.
 
 ```bash
-CONTAINERNAME="aiml-gpu" # = $VNAME
-LOCALDOMAIN="localdomain.xx"
-CONTAINERROOT=/var/lib/machines/$CONTAINERNAME
-CONTAINERIF='vb-'$CONTAINERNAME
-CONTAINERIP=192.168.1.114 # double check that this is the IP of the container!!!
-BASE=/root
-CONTAINERBP=$BASE/$CONTAINERNAME'_BP'
+export CONTAINERNAME="aiml-gpu" \ # = $VNAME
+LOCALDOMAIN="localdomain.xx" \
+CONTAINERROOT=/var/lib/machines/$CONTAINERNAME \
+CONTAINERIF='vb-'$CONTAINERNAME \
+CONTAINERIP=192.168.1.114 \ # double check that this is the IP of the container!!!
+BASE=/root \
+CONTAINERBP=$BASE/$CONTAINERNAME'_BP' \
 IPTABLES=/usr/sbin/iptables
+# check
+export -p
 ```
 
 We will check and create some folders and fill in proper values for the `hosts` file and the `whitelisted` domains.
@@ -1377,7 +1382,7 @@ cat > /var/lib/machines/$CONTAINERNAME/etc/hosts  << EOF
 EOF
 ```
 
-Basically, the `iptables` script first disables the network of the container and sets the DNS entry in `$CONTAINERROOT/etc/resolv.conf` to `127.0.0.1` (localhost). Then it protects the file as read-only with the mighty `chattr -i [...]`. The whitelisted domains are all resolved and written to `/etc/hosts` inside the container. The file is later marked as read-only as well and cannot be changed by the container. The next step is to use `iptables` to create chains for `INPUT` and `FORWARD` to allow for stateful firewall and drop everything not being part of the whitelisted domain list. The domains are converted to `ipv4` by using `dig`. `ipv6` is not supported. The created firewall rules are printed on the terminal and it finishes by enabling the network of the container.
+Basically, the `iptables` script first disables the network of the container and sets the DNS entry in `$CONTAINERROOT/etc/resolv.conf` to `127.0.0.1` (localhost). Then it protects the file as read-only with the mighty `chattr -i [...]`. The whitelisted domains are all resolved and written to `/etc/hosts` inside the container. The file is later marked as read-only as well and cannot be changed by the container. The next step is to use `iptables` to create chains for `INPUT` and `FORWARD` to allow for stateful firewall and drop everything not being part of the whitelisted domain list. The domains are restricted to `ipv4` by using `dig`. `ipv6` is not supported. The created firewall rules are printed on the terminal and it finishes by enabling the network of the container.
 Each time the whitelisted domains file is changed, the `iptables` script has to be re-run. The initial whitelisted domains are printed at the end of the tutorial. They are sufficient to apply everything from the tutorial (conda environment, install ComfyUI, Debian security updates). If something changes, just add the missing domain to the whitelist (see error message on the terminal) and re-run the script.
 
 ```bash
