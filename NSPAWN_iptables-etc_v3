@@ -7,7 +7,7 @@
 # check values
 
 CONTAINERNAME="aiml-gpu"
-LOCALDOMAIN="anicca-vijja.xx"
+LOCALDOMAIN="localdomain.xx"
 CONTAINERROOT=/var/lib/machines/$CONTAINERNAME
 CONTAINERIF='vb-'$CONTAINERNAME
 CONTAINERIP=192.168.1.114
