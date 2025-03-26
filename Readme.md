@@ -1,12 +1,9 @@
-# Basic security considerations for AI/ML engines (SD, ComfyUI, ...) using systemd-nspawn
-
-
-## TOC
+# Basic security considerations for AI/ML engines (SD, ComfyUI, ...) using systemd-nspawn TOC
 - [Advance Organizer](#advance-organizer)
 - [Overview](#overview)
 - [Security](#security)
 - [Files](#files)
-- [TUTORIAL](#tutorial)
+- [PROCEDURE](#procedure)
   - [Define variables](#define-variables)
   - [Check values](#check-values)
   - [Prepare folder for container](#prepare-folder-for-container)
@@ -84,7 +81,7 @@ To create `iptables` rules we use the script `NSPAWN_iptables-etc_v3`. It should
 - block all other access to the internet and the LAN
 - re-run it with a different whitelist to change access to the net
 
-The natural security risk is that the host can change the virtual network interface name on the host so that the iptables rules become meaningless. But this requires access to the host - then probably the computer is already compromised. One could also add a switch to block all other virtual network devices on localhost completely.
+The natural security risk is that the container manages to change the virtual network interface name on the host so that the iptables rules become meaningless if no other security measures are applied. But this requires access to the host - then probably the computer is already compromised. One could also add a switch to block all other virtual network devices on localhost completely.
 
 At the beginning of each file you have to adjust values according to local needs like names, IPs, etc. Those are essential and must be chosen in accordance to your preferences and computer environment.
 
@@ -95,14 +92,14 @@ The tutorial is mostly "copy & paste work" using different terminals:
 - on host as `root` to log into the container
   - in container as `root`to configure network and install packages
   - in container as `user1` (`$USERAI`) for AI/ML stuff (e.g. create conda environment, start AI/ML engine, ...)
-- in container as `user2` (`$BROWSER`) only for browser usage and interacting with the webUI
+  - in container as `user2` (`$BROWSER`) only for browser usage and interacting with the webUI
 
-So you need some terminals... if in one terminal the initial values (see scripts) are missing, go back to the start of the script and copy the appropriate parts into the terminal and check them for accuracy. Be aware that values between host and container naturally differ ie. keep in mind which terminal you use at this very moment. TO make it easier the hostname of the container is changed asap to reduce confusion.
+So you need some terminals... if in one terminal the initial values (see scripts) are missing, go back to the start of the script and copy the appropriate parts into the terminal and check them for accuracy. Be aware that values between host and container naturally differ ie. keep in mind which terminal you use at this very moment. To make it easier the hostname of the container is changed asap to reduce confusion so you can find out by looking at the prompt name where you are located.
 
-Some of the comments in the scripts may be helpful for some users. Others can just ignore them.
+Some of the comments in the scripts may be helpful for some esp. new users. Others can just ignore them.
 
 
-## TUTORIAL
+## PROCEDURE
 
 In the following some terms are used
 
@@ -117,6 +114,7 @@ First, look into the script and change names and variables according to your wis
 - As long as the bridge `br0` works, the tutorial should work.
 - If you need initially more packages, add additional packages to the `debootstrap` command.
 - We focus here on a minimal system and you may even try later to remove some packages not required anymore.
+- The following is limited to NVIDI GPUs - however, only small parts have to be changed for AMD and Intel GPUs. Due to the lack of different GPUs, those parts are left out. Sorry.
 
 
 ### Define variables
